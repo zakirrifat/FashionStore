@@ -1,0 +1,125 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Filament\Pages\ManageSettings;
+use App\Models\ContactMessage;
+use App\Models\Faq;
+use App\Models\Page;
+use App\Models\Setting;
+use App\Models\User;
+use Database\Seeders\ContentSeeder;
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+class ContentTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+        $this->seed(ContentSeeder::class);
+    }
+
+    public function test_seeded_pages_show_and_appear_in_footer(): void
+    {
+        $this->get('/pages/shipping-returns')->assertOk()->assertSee('Shipping &amp; Returns', false)->assertSee('Refunds');
+        $this->get('/pages/size-guide')->assertOk()->assertSee('<table>', false);
+
+        $this->get('/')->assertSee(route('shop.page', 'privacy'))->assertSee(route('shop.contact'))->assertSee(route('shop.faq'));
+    }
+
+    public function test_unpublished_page_is_hidden(): void
+    {
+        Page::where('slug', 'careers')->update(['is_active' => false]);
+
+        $this->get('/pages/careers')->assertNotFound();
+        $this->get('/')->assertDontSee(route('shop.page', 'careers'));
+    }
+
+    public function test_page_html_is_sanitised(): void
+    {
+        Page::create(['title' => 'Test', 'slug' => 'test', 'body' => '<p>Hello</p><script>alert(1)</script>']);
+
+        $this->get('/pages/test')->assertOk()->assertSee('Hello')->assertDontSee('<script>alert(1)</script>', false);
+    }
+
+    public function test_faq_page_groups_by_topic(): void
+    {
+        Faq::where('question', 'like', 'Can I change%')->update(['is_active' => false]);
+
+        $this->get('/faq')->assertOk()
+            ->assertSee('Delivery')
+            ->assertSee('Do you ship internationally?')
+            ->assertDontSee('Can I change or cancel my order?');
+    }
+
+    public function test_contact_form_saves_message_and_emails_shop(): void
+    {
+        Mail::fake();
+
+        $this->post('/contact', [
+            'name' => 'Thandi', 'email' => 'thandi@example.com', 'subject' => 'Sizing advice',
+            'message' => 'Which size should I take in the jacket?',
+        ])->assertRedirect('/contact')->assertSessionHas('sent');
+
+        $this->assertDatabaseHas('contact_messages', ['email' => 'thandi@example.com', 'subject' => 'Sizing advice']);
+        $this->get('/contact')->assertSee('Thank you');
+    }
+
+    public function test_contact_form_validates_and_blocks_bots(): void
+    {
+        $this->post('/contact', ['name' => '', 'email' => 'nope', 'subject' => 'Hack', 'message' => 'hi'])
+            ->assertSessionHasErrors(['name', 'email', 'subject', 'message']);
+
+        $this->post('/contact', [
+            'name' => 'Bot', 'email' => 'bot@example.com', 'subject' => 'Other',
+            'message' => 'Buy cheap things now!!!', 'website' => 'http://spam.example',
+        ])->assertSessionHas('sent');
+
+        $this->assertSame(0, ContactMessage::count());
+    }
+
+    public function test_admin_can_save_store_settings_and_shop_uses_them(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(ManageSettings::class)
+            ->fillForm([
+                'announcement_enabled' => true,
+                'announcement_text' => 'Winter sale now on',
+                'contact_email' => 'shop@example.com',
+                'contact_phone' => '+27 21 000 0000',
+                'social_instagram' => 'https://instagram.com/example',
+                'product_notes' => [['text' => 'Free delivery over R 2 000']],
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('shop@example.com', Setting::get('contact_email'));
+        $this->assertSame(['Free delivery over R 2 000'], Setting::get('product_notes'));
+
+        // Re-opening the page shows the saved note.
+        $notes = Livewire::test(ManageSettings::class)->get('data.product_notes');
+        $this->assertSame(['Free delivery over R 2 000'], array_column(array_values($notes), 'text'));
+
+        $this->get('/')->assertSee('Winter sale now on')->assertSee('https://instagram.com/example');
+        $this->get('/contact')->assertSee('+27 21 000 0000');
+    }
+
+    public function test_staff_cannot_open_store_settings(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'staff']));
+
+        $this->get('/admin/manage-settings')->assertForbidden();
+        $this->get('/admin/pages')->assertOk();
+        $this->get('/admin/faqs')->assertOk();
+        $this->get('/admin/contact-messages')->assertOk();
+    }
+}
