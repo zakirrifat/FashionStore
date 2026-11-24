@@ -78,11 +78,70 @@ class ManageHomePage extends Page
                     ->blockPickerColumns(2)
                     ->helperText('Sections appear on the home page in this order. Drag to reorder. Leave empty to show the automatic home page (latest featured product + new arrivals).')
                     ->blocks([
+                        $this->slideshowBlock(),
                         $this->heroBlock(),
                         $this->doubleBannerBlock(),
                         $this->productsBlock(),
                         $this->tilesBlock(),
                         $this->textBlock(),
+                        $this->aboutBlock(),
+                        $this->offerBlock(),
+                    ]),
+            ]);
+    }
+
+    /** Any number of large banners that change automatically. */
+    private function slideshowBlock(): Block
+    {
+        return Block::make('slideshow')
+            ->label(fn (?array $state) => 'Banner slideshow'.(isset($state['slides']) ? ' — '.count($state['slides']).' '.str('slide')->plural(count($state['slides'])) : ''))
+            ->icon('heroicon-o-film')
+            ->schema([
+                Grid::make(3)->schema([
+                    TextInput::make('seconds')
+                        ->label('Seconds per slide')
+                        ->numeric()->integer()->minValue(3)->maxValue(15)->default(6)->required()
+                        ->suffix('sec')
+                        ->helperText('How long each banner shows before the next one (3–15).'),
+                    Select::make('transition')
+                        ->options(['fade' => 'Crossfade + slow zoom', 'slide' => 'Slide sideways'])
+                        ->default('fade')->required(),
+                    Select::make('height')
+                        ->options(['full' => 'Full screen', 'large' => 'Large (70%)', 'medium' => 'Medium (50%)'])
+                        ->default('full')->required(),
+                ]),
+                Repeater::make('slides')
+                    ->label('Slides')
+                    ->helperText('Add as many slides as you like. Drag to reorder.')
+                    ->minItems(1)
+                    ->defaultItems(1)
+                    ->addActionLabel('Add slide')
+                    ->reorderableWithDragAndDrop()
+                    ->collapsible()
+                    ->collapsed() // keeps the list short so "Add slide" is in view; click a slide to edit it
+                    ->itemLabel(fn (array $state): ?string => filled($state['heading'] ?? null) ? $state['heading'] : 'Slide')
+                    ->columns(2)
+                    ->schema([
+                        Radio::make('media')
+                            ->options(['image' => 'Image', 'video' => 'Video'])
+                            ->default('image')->inline()->live()->columnSpanFull(),
+                        self::image('image', 'Image (desktop)')
+                            ->required(fn (Get $get) => $get('media') !== 'video')
+                            ->helperText('Landscape, at least 2400 px wide. For video slides it shows while the video loads.'),
+                        self::image('mobile_image', 'Image for phones (optional)')
+                            ->helperText('Shown in full on phones. Best at 1080 × 1350 px, using the same size for every slide. If empty, the whole desktop image is shown as a shorter banner.'),
+                        FileUpload::make('video')
+                            ->label('Video (MP4, max 50 MB)')
+                            ->disk('public')->directory('home')
+                            ->acceptedFileTypes(['video/mp4', 'video/webm'])->maxSize(51200)
+                            ->visible(fn (Get $get) => $get('media') === 'video')
+                            ->required(fn (Get $get) => $get('media') === 'video')
+                            ->columnSpanFull(),
+                        TextInput::make('eyebrow')->label('Small text above heading')->placeholder('New season'),
+                        TextInput::make('heading')->placeholder('Winter Collection'),
+                        TextInput::make('button_text')->placeholder('Shop now'),
+                        self::link('link'),
+                        Select::make('text_colour')->options(['light' => 'White text', 'dark' => 'Black text'])->default('light')->required(),
                     ]),
             ]);
     }
@@ -90,7 +149,7 @@ class ManageHomePage extends Page
     private function heroBlock(): Block
     {
         return Block::make('hero')
-            ->label(fn (?array $state) => 'Large banner'.(filled($state['heading'] ?? null) ? ' â€” '.$state['heading'] : ''))
+            ->label(fn (?array $state) => 'Large banner'.(filled($state['heading'] ?? null) ? ' — '.$state['heading'] : ''))
             ->icon('heroicon-o-photo')
             ->columns(2)
             ->schema([
@@ -132,7 +191,7 @@ class ManageHomePage extends Page
         ]);
 
         return Block::make('double_banner')
-            ->label(fn (?array $state) => 'Two banners'.(filled($state['left_title'] ?? null) ? ' â€” '.$state['left_title'].' / '.($state['right_title'] ?? '') : ''))
+            ->label(fn (?array $state) => 'Two banners'.(filled($state['left_title'] ?? null) ? ' — '.$state['left_title'].' / '.($state['right_title'] ?? '') : ''))
             ->icon('heroicon-o-view-columns')
             ->columns(2)
             ->schema([
@@ -144,7 +203,7 @@ class ManageHomePage extends Page
     private function productsBlock(): Block
     {
         return Block::make('products')
-            ->label(fn (?array $state) => 'Product row'.(filled($state['title'] ?? null) ? ' â€” '.$state['title'] : ''))
+            ->label(fn (?array $state) => 'Product row'.(filled($state['title'] ?? null) ? ' — '.$state['title'] : ''))
             ->icon('heroicon-o-squares-2x2')
             ->columns(2)
             ->schema([
@@ -154,9 +213,8 @@ class ManageHomePage extends Page
                     ->options([
                         'latest' => 'Newest products',
                         'featured' => 'Featured products',
-                        'sale' => 'Products on sale',
-                        'collection' => 'A collectionâ€¦',
-                        'category' => 'A categoryâ€¦',
+                        'collection' => 'A collection…',
+                        'category' => 'A category…',
                     ])
                     ->default('latest')
                     ->required()
@@ -181,7 +239,7 @@ class ManageHomePage extends Page
     private function tilesBlock(): Block
     {
         return Block::make('tiles')
-            ->label(fn (?array $state) => 'Image tiles'.(filled($state['title'] ?? null) ? ' â€” '.$state['title'] : ''))
+            ->label(fn (?array $state) => 'Image tiles'.(filled($state['title'] ?? null) ? ' — '.$state['title'] : ''))
             ->icon('heroicon-o-rectangle-group')
             ->schema([
                 Grid::make(2)->schema([
@@ -208,7 +266,7 @@ class ManageHomePage extends Page
     private function textBlock(): Block
     {
         return Block::make('text')
-            ->label(fn (?array $state) => 'Text'.(filled($state['heading'] ?? null) ? ' â€” '.$state['heading'] : ''))
+            ->label(fn (?array $state) => 'Text'.(filled($state['heading'] ?? null) ? ' — '.$state['heading'] : ''))
             ->icon('heroicon-o-bars-3-bottom-left')
             ->columns(2)
             ->schema([
@@ -217,6 +275,47 @@ class ManageHomePage extends Page
                 Textarea::make('body')->rows(4)->columnSpanFull(),
                 TextInput::make('button_text'),
                 self::link('link'),
+            ]);
+    }
+
+    /** Company story: heading and text on the left, picture on the right. */
+    private function aboutBlock(): Block
+    {
+        return Block::make('about')
+            ->label(fn (?array $state) => 'About / Who we are'.(filled($state['heading'] ?? null) ? ' — '.$state['heading'] : ''))
+            ->icon('heroicon-o-building-storefront')
+            ->columns(2)
+            ->schema([
+                TextInput::make('heading')->required()->maxLength(120)->placeholder('Who We Are'),
+                self::image('image', 'Image')
+                    ->required()
+                    ->helperText('Square or portrait works best, at least 1200 px wide.'),
+                Textarea::make('body')
+                    ->label('Text')
+                    ->required()
+                    ->rows(10)
+                    ->helperText('Press Enter to start a new paragraph.')
+                    ->columnSpanFull(),
+            ]);
+    }
+
+    /** A heading with a checklist of services, three per row on desktop. */
+    private function offerBlock(): Block
+    {
+        return Block::make('offer')
+            ->label(fn (?array $state) => 'What we offer'.(filled($state['heading'] ?? null) ? ' — '.$state['heading'] : ''))
+            ->icon('heroicon-o-check-circle')
+            ->schema([
+                TextInput::make('heading')->required()->maxLength(120)->placeholder('What we can offer'),
+                Repeater::make('items')
+                    ->label('Options')
+                    ->helperText('Add, edit, remove or drag to reorder. They fill left to right, three per row.')
+                    ->simple(TextInput::make('text')->required()->maxLength(120)->placeholder('Factory & Product Sourcing'))
+                    ->minItems(1)
+                    ->defaultItems(1)
+                    ->addActionLabel('Add option')
+                    ->reorderableWithDragAndDrop()
+                    ->grid(3),
             ]);
     }
 
@@ -235,7 +334,7 @@ class ManageHomePage extends Page
     {
         return TextInput::make($name)
             ->label('Link')
-            ->placeholder('/c/woman  or  https://â€¦')
+            ->placeholder('/c/woman  or  https://…')
             ->regex('#^(/[^\s]*|https?://[^\s]+)$#')
             ->validationMessages(['regex' => 'Start with / for a page on this site, or https:// for another site.']);
     }
@@ -254,11 +353,35 @@ class ManageHomePage extends Page
         ]);
     }
 
+    /** Create every resized size of every image used in the sections (skips ones that already exist). */
+    private function warmImages(array $sections): void
+    {
+        $paths = [];
+        array_walk_recursive($sections, function ($value, $key) use (&$paths) {
+            if (is_string($key) && is_string($value) && preg_match('/(^|_)image$/', $key) && \App\Support\Img::canResize($value)) {
+                $paths[] = $value;
+            }
+        });
+
+        foreach (array_unique($paths) as $path) {
+            foreach ([400, 800, 1200, 1600, 2400] as $width) {
+                try {
+                    \App\Support\Img::make($path, $width);
+                } catch (\Throwable $e) {
+                    report($e); // a broken image must not stop the save
+                }
+            }
+        }
+    }
+
     public function save(): void
     {
         $sections = array_values($this->form->getState()['sections'] ?? []);
 
         Setting::saveMany(['home_sections' => $sections], 'Home page updated');
+
+        // Make the resized WebP copies now, so visitors never wait for them (banners can be large).
+        $this->warmImages($sections);
 
         Notification::make()->success()->title('Home page saved')->send();
     }}

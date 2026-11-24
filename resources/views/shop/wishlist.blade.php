@@ -19,13 +19,13 @@
         @endguest
 
         @if ($items->isEmpty())
-            <div class="py-20 text-center">
+            <div class="bg-paper-2 px-6 py-14 md:py-16 text-center">
                 <p class="label mb-2">Your wishlist is empty</p>
                 <p class="text-mute mb-6">Tap “Wishlist” on any product to save it here.</p>
                 <a href="{{ route('shop.home') }}" class="btn-line max-w-xs mx-auto">Continue shopping</a>
             </div>
         @else
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-1 md:gap-x-2">
+            <div class="shop-w grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-1 md:gap-x-2">
                 @foreach ($items as $item)
                     @php
                         $product = $item->product;
@@ -33,9 +33,9 @@
                         $image = $colour?->images->first();
                         $inStock = $colour && $colour->variants->sum('stock') > 0;
                     @endphp
-                    <article>
+                    <article x-data>
                         <a href="{{ $product->url($colour) }}" class="block group">
-                            <div class="relative aspect-[3/4] bg-neutral-100 overflow-hidden">
+                            <div class="relative aspect-[3/4] bg-paper-2 overflow-hidden">
                                 @if ($image)
                                     <img src="{{ $image->url() }}" alt="{{ $product->name }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
                                 @endif
@@ -43,20 +43,21 @@
                                     <span class="absolute top-2 left-2 bg-paper label px-2 py-1">Sold out</span>
                                 @endunless
                             </div>
-                            <div class="pt-2 flex justify-between gap-3">
-                                <div class="min-w-0">
-                                    <h3 class="label truncate group-hover:underline">{{ $product->name }}</h3>
-                                    <p class="label text-mute">{{ $colour?->name }}</p>
-                                </div>
-                                <p class="label whitespace-nowrap">{{ \App\Support\Money::format($product->price) }}</p>
+                            <div class="pt-2 min-w-0">
+                                <h3 class="label truncate group-hover:underline">{{ $product->name }}</h3>
+                                <p class="label text-mute">{{ $colour?->name }}</p>
                             </div>
                         </a>
-                        <form method="post" action="{{ route('wishlist.toggle') }}" class="pt-1 pb-6">
-                            @csrf
-                            <input type="hidden" name="product_id" value="{{ $product->id }}">
-                            <input type="hidden" name="colour_id" value="{{ $item->savedColourId }}">
-                            <button class="label link-u text-mute">Remove</button>
-                        </form>
+                        <div class="pt-2 pb-6 flex items-center justify-between gap-3">
+                            <button type="button" class="label link-u"
+                                    @click="$store.enquiry.open(@js(['id' => $product->id, 'name' => $product->name, 'image' => $image?->url(400), 'colourId' => $colour?->id, 'colour' => $colour?->name]))">Ask for price</button>
+                            <form method="post" action="{{ route('wishlist.toggle') }}">
+                                @csrf
+                                <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                <input type="hidden" name="colour_id" value="{{ $item->savedColourId }}">
+                                <button class="label link-u text-mute">Remove</button>
+                            </form>
+                        </div>
                     </article>
                 @endforeach
             </div>

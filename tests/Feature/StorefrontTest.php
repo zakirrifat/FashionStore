@@ -46,7 +46,7 @@ class StorefrontTest extends TestCase
     {
         $this->product(['is_featured' => true]);
 
-        $this->get('/')->assertOk()->assertSee('Leather Jacket')->assertSee('R 12 500');
+        $this->get('/')->assertOk()->assertSee('Leather Jacket')->assertSee('Ask for price');
     }
 
     public function test_parent_category_includes_products_from_child_categories(): void
@@ -75,7 +75,9 @@ class StorefrontTest extends TestCase
             ->assertSee('Leather Jacket')
             ->assertSee('Boxy fit')
             ->assertSee('Two pockets')
-            ->assertSee('R 12 500')
+            ->assertSee('Ask for price')
+            ->assertDontSee('R 12 500')
+            ->assertDontSee('priceCurrency')
             ->assertSee('"@type":"Product"', false)
             ->assertSee('Outerwear');
     }

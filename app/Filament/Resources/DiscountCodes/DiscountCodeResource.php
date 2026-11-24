@@ -24,6 +24,12 @@ class DiscountCodeResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    /** Hidden (menu and URLs) while checkout is switched off — see config/shop.php. */
+    public static function canAccess(): bool
+    {
+        return config('shop.checkout_enabled') && parent::canAccess();
+    }
+
     protected static ?string $navigationLabel = 'Discount codes';
 
     public static function form(Schema $schema): Schema

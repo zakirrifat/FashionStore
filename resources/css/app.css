@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Fashion Store — design system
+   OMR TEX FASHIONS — design system
    Fonts are self-hosted (no Google requests, POPIA/GDPR friendly).
    ═══════════════════════════════════════════════════════════════ */
 @import '@fontsource-variable/inter-tight';
@@ -14,15 +14,22 @@
     --font-sans: 'Inter Tight Variable', ui-sans-serif, system-ui, sans-serif;
     --font-serif: 'Fraunces Variable', ui-serif, Georgia, serif;
 
-    /* Warm neutrals */
-    --color-paper: #faf9f6;
+    /* Warm neutrals — these SWAP in dark theme (see [data-theme='dark'] below) */
+    --color-paper: #faf9f6;        /* page background */
     --color-paper-2: #f2f0eb;      /* image placeholders, panels */
-    --color-ink: #141412;
+    --color-ink: #141412;          /* main text, primary buttons */
     --color-ink-2: #2b2a27;
-    --color-mute: #77746d;
-    --color-line: #e3e0d8;
+    --color-mute: #77746d;         /* secondary text */
+    --color-line: #e3e0d8;         /* borders */
+    --color-line-strong: #c9c5bb;  /* input underlines */
     --color-sale: #a3321f;
     --color-ok: #2f5d46;
+
+    /* Fixed — the SAME in both themes */
+    --color-day: #faf9f6;          /* text/buttons on photos */
+    --color-night: #141412;        /* footer, behind hero photos */
+    --color-baby: #89cff0;         /* primary buttons */
+    --color-baby-deep: #6cc0ea;    /* primary button hover */
 
     /* Motion */
     --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -38,6 +45,27 @@
 ::view-transition-new(root) { animation: 520ms var(--ease-out-quint) both vt-in; }
 @keyframes vt-out { to { opacity: 0; transform: translateY(-8px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(14px); } }
+
+/* ─────────── Dark theme: same design, inverted warm palette ─────────── */
+:root { color-scheme: light; }
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-paper: #121110;
+    --color-paper-2: #1d1c1a;
+    --color-ink: #f1eee7;
+    --color-ink-2: #d9d5cc;
+    --color-mute: #9d988e;
+    --color-line: #2d2b28;
+    --color-line-strong: #4a4743;
+    --color-sale: #e2765f;
+    --color-ok: #85bb9b;
+}
+/* Theme switch: a soft circular wipe from the top-right (where the switch is) */
+:root.theme-wipe::view-transition-old(root) { animation: none; z-index: 1; }
+:root.theme-wipe::view-transition-new(root) { animation: theme-wipe 700ms var(--ease-in-out-quart) both; z-index: 2; }
+@keyframes theme-wipe { from { clip-path: circle(0% at 92% 3%); } to { clip-path: circle(150% at 92% 3%); } }
+/* Fallback without View Transitions: fade colours (only during the switch, so normal hovers stay snappy) */
+:root.theme-switching, :root.theme-switching * { transition: background-color 500ms var(--ease-out-quint), border-color 500ms var(--ease-out-quint), color 500ms var(--ease-out-quint) !important; }
 
 @layer base {
     html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; scrollbar-gutter: stable; }
@@ -66,6 +94,49 @@
     .lead { @apply text-[16px] md:text-[18px] leading-[1.55] text-ink-2; }
     .gutter { @apply px-4 md:px-8 xl:px-10; }
     .container-x { @apply mx-auto max-w-[1680px]; }
+    /* Standard product sizing: grids stop growing past 1440px (≈340px cards at 4-up),
+       rail cards past 340px, so photos stay the same size on big monitors. */
+    .shop-w { @apply mx-auto w-full max-w-[1440px]; }
+    .rail-card { @apply snap-start shrink-0 w-[72vw] sm:w-[44vw] md:w-[31vw] xl:w-[23.5vw] max-w-[340px]; }
+
+    /* ─────────── Section rhythm ───────────
+       One gap between home/page sections that scales with the screen
+       (48px on phones → 72px on wide screens) instead of fixed 96–128px. */
+    .section { padding-top: clamp(3rem, 4.5vw, 4.5rem); }
+    .section-mt { margin-top: clamp(3rem, 4.5vw, 4.5rem); }
+    .section-title { font-family: var(--font-serif); font-weight: 380; letter-spacing: -0.025em; line-height: 1.05; font-size: clamp(1.625rem, 2.6vw, 2.5rem); }
+
+    /* Edge: side padding that lines content up with the 1440px product grid.
+       Phones/tablets use the normal gutter; on wide screens the content edge
+       moves in to match the centred grid, so titles, rails and grids share one left edge. */
+    .edge { --edge: max(1rem, calc((100% - 1440px) / 2)); padding-inline: var(--edge); }
+    @media (width >= 48rem) { .edge { --edge: max(2rem, calc((100% - 1440px) / 2)); } }
+    @media (width >= 80rem) { .edge { --edge: max(2.5rem, calc((100% - 1440px) / 2)); } }
+    .rail.edge { scroll-padding-inline: var(--edge); }
+
+    /* ─────────── Category menu rows (mega menu + phone menu) ─────────── */
+    .menu-heading { @apply text-[11px] uppercase tracking-[0.18em] text-mute flex items-center gap-4 mb-3; }
+    .menu-heading::after { content: ''; @apply w-10 h-px bg-line-strong; }
+    .menu-row { @apply flex items-center gap-4 h-12 px-3 border-b border-line text-[14px] text-ink; transition: background-color 300ms var(--ease-out-quint); }
+    .menu-row svg { @apply text-ink-2; }
+    .menu-row:hover, .menu-row:focus-visible { @apply bg-paper-2; }
+    .menu-chev { @apply ml-auto text-mute text-[13px]; transition: transform 400ms var(--ease-out-quint), color 300ms; }
+    .menu-row:hover .menu-chev, .menu-row:focus-visible .menu-chev { @apply text-ink translate-x-1; }
+    .menu-row-all { @apply bg-paper-2 font-medium border-b-0 mb-1; }
+    .menu-row-all:hover, .menu-row-all:focus-visible { background: color-mix(in srgb, var(--color-line) 70%, var(--color-paper-2)); }
+    .menu-row-all .menu-chev { @apply text-ink; }
+
+    /* ─────────── Footer link rows: hairline dividers, arrow fades in on hover ─────────── */
+    .foot-link { @apply flex items-center gap-3 py-2.5 border-b border-line text-[14px] text-ink min-w-0; }
+    .foot-link > span { transition: transform 450ms var(--ease-out-quint); }
+    .foot-link::after { content: '→'; @apply ml-auto text-[13px] opacity-0 -translate-x-1.5; transition: opacity 300ms, transform 450ms var(--ease-out-quint); }
+    .foot-link:hover > span, .foot-link:focus-visible > span { transform: translateX(4px); }
+    .foot-link:hover::after, .foot-link:focus-visible::after { @apply opacity-100 translate-x-0; }
+
+    /* Prev/next arrows beside a section title */
+    .rail-btn { @apply w-10 h-10 grid place-items-center border border-line text-ink; transition: background-color 300ms, color 300ms, border-color 300ms, opacity 300ms; }
+    .rail-btn:hover:not(:disabled) { @apply bg-ink text-paper border-ink; }
+    .rail-btn:disabled { @apply opacity-30 cursor-default; }
 
     /* ─────────── Links ─────────── */
     .link-u { @apply relative inline-block; }
@@ -83,21 +154,21 @@
     :is(.btn, .btn-black, .btn-line, .btn-light, .btn-dark-outline):active { transform: scale(0.99); }
     :is(.btn, .btn-black, .btn-line, .btn-light, .btn-dark-outline):disabled { @apply cursor-not-allowed opacity-50; }
     :is(.btn, .btn-black, .btn-line, .btn-light, .btn-dark-outline):disabled::before { display: none; }
-    .btn-black { @apply bg-ink text-paper; }
-    .btn-black::before { @apply bg-ink-2; }
+    .btn-black { @apply bg-baby text-night; }
+    .btn-black::before { @apply bg-baby-deep; }
     .btn-line { @apply border border-ink text-ink; }
     .btn-line::before { @apply bg-ink; }
     .btn-line:hover { @apply text-paper; }
-    .btn-light { @apply border border-paper text-paper w-auto; }
-    .btn-light::before { @apply bg-paper; }
-    .btn-light:hover { @apply text-ink; }
+    .btn-light { @apply border border-day text-day w-auto; }
+    .btn-light::before { @apply bg-day; }
+    .btn-light:hover { @apply text-night; }
     .btn-dark-outline { @apply border border-ink text-ink w-auto; }
     .btn-dark-outline::before { @apply bg-ink; }
     .btn-dark-outline:hover { @apply text-paper; }
 
     /* ─────────── Form fields (floating labels) ─────────── */
     .field { @apply relative block pt-4; }
-    .field-input { @apply w-full border-0 border-b border-[#c9c5bb] bg-transparent pb-2 pt-1.5 outline-none rounded-none appearance-none; transition: border-color 250ms; }
+    .field-input { @apply w-full border-0 border-b border-line-strong bg-transparent pb-2 pt-1.5 outline-none rounded-none appearance-none; transition: border-color 250ms; }
     .field-input:focus { @apply border-ink; }
     .field-label { @apply pointer-events-none absolute left-0 top-[22px] text-mute origin-left; transition: transform 300ms var(--ease-out-quint), color 300ms; }
     .field-input:focus ~ .field-label,
@@ -119,7 +190,7 @@
     .chip:hover:not(:disabled) { @apply border-ink; }
     .chip:active:not(:disabled) { transform: scale(0.96); }
     .chip.is-on { @apply bg-ink text-paper border-ink; }
-    .chip:disabled { @apply text-[#bbb7ad] cursor-not-allowed; background: linear-gradient(to top right, transparent calc(50% - 0.5px), var(--color-line) 50%, transparent calc(50% + 0.5px)); }
+    .chip:disabled { @apply text-line-strong cursor-not-allowed; background: linear-gradient(to top right, transparent calc(50% - 0.5px), var(--color-line) 50%, transparent calc(50% + 0.5px)); }
 
     /* ─────────── Images: placeholder + soft reveal on load ─────────── */
     .img-frame { @apply relative overflow-hidden bg-paper-2; }
@@ -127,7 +198,7 @@
     .img-fade.is-loaded { opacity: 1; transform: none; }
 
     /* ─────────── Drawers / overlays ─────────── */
-    .scrim { @apply fixed inset-0 z-[60] bg-ink/30 backdrop-blur-[2px]; }
+    .scrim { @apply fixed inset-0 z-[60] bg-night/40 backdrop-blur-[2px]; }
     .drawer { @apply fixed inset-y-0 right-0 z-[70] flex w-full max-w-[440px] flex-col bg-paper shadow-2xl; }
     .drawer-head { @apply flex h-14 shrink-0 items-center justify-between border-b border-line px-6; }
 
@@ -146,9 +217,11 @@
     .rich th, .rich td { @apply border-b border-line px-3 py-2.5 text-left; }
     .rich th { @apply font-medium text-ink; }
 
+    /* Header over a photo: white logo until the header turns solid */
+
     /* Skeleton shimmer */
     .skeleton { @apply bg-paper-2 relative overflow-hidden; }
-    .skeleton::after { content: ''; @apply absolute inset-0 -translate-x-full; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent); animation: shimmer 1.4s infinite; }
+    .skeleton::after { content: ''; @apply absolute inset-0 -translate-x-full; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-paper) 60%, transparent), transparent); animation: shimmer 1.4s infinite; }
     @keyframes shimmer { to { transform: translateX(100%); } }
 
     /* Horizontal drag-scroll rows */
@@ -163,9 +236,12 @@
     .js-motion [data-reveal]:not(.is-in) { opacity: 0; transform: translateY(28px); }
     .js-motion [data-reveal] { transition: opacity var(--duration-reveal) var(--ease-out-quint), transform var(--duration-reveal) var(--ease-out-quint); transition-delay: var(--d, 0ms); }
     .js-motion [data-reveal='fade']:not(.is-in) { transform: none; }
-    .js-motion [data-reveal='mask'] { clip-path: inset(0 0 0 0); transition: clip-path 1200ms var(--ease-in-out-quart), opacity 10ms; transition-delay: var(--d, 0ms); }
-    .js-motion [data-reveal='mask']:not(.is-in) { clip-path: inset(100% 0 0 0); transform: none; opacity: 1; }
-    .js-motion [data-reveal='mask'] img, .js-motion [data-reveal='mask'] video { transition: transform 1800ms var(--ease-out-quint); transition-delay: var(--d, 0ms); }
+    /* The mask clips the children, not the element itself: a fully clipped element
+       never counts as on screen, so the scroll observer would never reveal it. */
+    .js-motion [data-reveal='mask']:not(.is-in) { transform: none; opacity: 1; }
+    .js-motion [data-reveal='mask'] > * { clip-path: inset(0 0 0 0); transition: clip-path 1200ms var(--ease-in-out-quart); transition-delay: var(--d, 0ms); }
+    .js-motion [data-reveal='mask']:not(.is-in) > * { clip-path: inset(100% 0 0 0); }
+    .js-motion [data-reveal='mask'] img, .js-motion [data-reveal='mask'] video { transition: clip-path 1200ms var(--ease-in-out-quart), transform 1800ms var(--ease-out-quint); transition-delay: var(--d, 0ms); }
     .js-motion [data-reveal='mask']:not(.is-in) img, .js-motion [data-reveal='mask']:not(.is-in) video { transform: scale(1.12); }
 
     /* Split headlines: each line rises from behind a mask */
@@ -187,8 +263,29 @@
     @keyframes draw { to { stroke-dashoffset: 0; } }
 
     .marquee { animation: marquee 30s linear infinite; }
+
+    /* Banner slideshow: which slide is visible */
+    .slide-item.is-fading { opacity: 0; z-index: 0; transition: opacity 1200ms var(--ease-out-quint); }
+    .slide-item.is-fading.is-current { opacity: 1; z-index: 10; }
+    .slide-item.is-sliding { z-index: 10; transform: translateX(calc(var(--pos, 0) * 100%)); transition: transform 1000ms var(--ease-in-out-quart); }
+
+    /* Banner slideshow: progress lines and slow zoom on the visible slide */
+    .slide-bar { transform: scaleX(0); }
+    .slide-bar.is-done { transform: scaleX(1); }
+    .slide-bar.is-running { animation-name: slide-fill; animation-timing-function: linear; animation-fill-mode: forwards; }
+    @keyframes slide-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .slide-zoom.is-active { animation: kenburns var(--slide-seconds, 8s) var(--ease-out-quint) both; }
+    @media (max-width: 767px) { .slide-zoom.is-active { animation: none; } } /* zooming would crop the full banner on phones */
     @keyframes marquee { to { transform: translateX(-50%); } }
 }
+
+/* ─────────── Logo swap (outside layers so nothing overrides it) ───────────
+   Light theme: dark logo. Dark theme: light logo. Header over a photo: light logo. */
+img.logo-light { opacity: 0; }
+:root[data-theme='dark'] img.logo-dark { opacity: 0; }
+:root[data-theme='dark'] img.logo-light { opacity: 1; }
+[data-header][data-overlay]:not(.is-solid):not(:hover) img.logo-dark { opacity: 0; }
+[data-header][data-overlay]:not(.is-solid):not(:hover) img.logo-light { opacity: 1; }
 
 /* Respect "reduce motion" on the visitor's device: no movement, instant states. */
 @media (prefers-reduced-motion: reduce) {

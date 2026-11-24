@@ -15,20 +15,20 @@ class CatalogueSeeder extends Seeder
 {
     public function run(): void
     {
+        // Clothing only — the store does not sell shoes, bags or accessories.
         $clothing = ['Jeans', 'Outerwear', 'Sweatshirts', 'Knitwear', 'Trousers', 'T-shirts', 'Shirts', 'Suit Jackets', 'Shorts'];
-        $accessories = ['Scarves', 'Bags', 'Hats', 'Shoes', 'Small Leather Goods', 'Jewellery', 'Eyewear', 'Belts'];
 
         $tree = [
             'Woman' => [
                 'Clothing' => array_merge($clothing, ['Dresses', 'Skirts']),
-                'Shoes & Accessories' => $accessories,
             ],
             'Man' => [
                 'Clothing' => $clothing,
-                'Shoes & Accessories' => $accessories,
             ],
-            'Bags' => ['Shoulder Bags' => [], 'Top Handle Bags' => [], 'Backpacks' => [], 'Crossbody Bags' => [], 'Totes' => [], 'Micro Bags' => []],
-            'Scarves' => ['Cashmere' => [], 'Wool' => [], 'Silk' => [], 'Printed' => []],
+            'Kids' => [
+                'Girls' => ['Dresses', 'Skirts', 'T-shirts', 'Sweatshirts', 'Knitwear', 'Jeans', 'Trousers', 'Outerwear', 'Shorts'],
+                'Boys' => ['T-shirts', 'Shirts', 'Sweatshirts', 'Knitwear', 'Jeans', 'Trousers', 'Outerwear', 'Shorts'],
+            ],
         ];
 
         $sort = 0;
@@ -52,7 +52,7 @@ class CatalogueSeeder extends Seeder
     {
         // Slug includes the parent path so "Woman › Jeans" and "Man › Jeans" don't clash.
         $slug = Str::slug(($parent ? $parent->slug.' ' : '').$name);
-        $slug = str_replace(['woman-clothing-', 'man-clothing-', 'woman-shoes-accessories-', 'man-shoes-accessories-'], ['woman-', 'man-', 'woman-', 'man-'], $slug);
+        $slug = str_replace(['woman-clothing-', 'man-clothing-'], ['woman-', 'man-'], $slug);
 
         return Category::firstOrCreate(
             ['slug' => $slug],

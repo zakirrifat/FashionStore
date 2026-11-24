@@ -54,6 +54,8 @@ class ContentController extends Controller
 
         $message = ContactMessage::create($data + ['ip' => $request->ip()]);
 
+        \App\Services\AdminNotifier::contactMessage($message);
+
         // Notify the shop. A mail failure must not lose the message — it's already saved.
         try {
             Mail::raw(

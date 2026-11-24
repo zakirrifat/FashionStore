@@ -15,7 +15,7 @@
         <ul class="border-t border-line">
             @foreach ($orders as $order)
                 <li class="border-b border-line">
-                    <a href="{{ route('account.orders.show', $order->number) }}" class="py-4 grid grid-cols-2 sm:grid-cols-4 gap-2 hover:bg-neutral-50 px-2 -mx-2">
+                    <a href="{{ route('account.orders.show', $order->number) }}" class="py-4 grid grid-cols-2 sm:grid-cols-4 gap-2 hover:bg-paper-2 px-2 -mx-2">
                         <span><span class="label block">{{ $order->number }}</span><span class="text-mute">{{ $order->created_at->timezone(config('app.admin_timezone'))->format('j M Y') }}</span></span>
                         <span class="text-mute">{{ $order->itemCount() }} {{ \Illuminate\Support\Str::plural('item', $order->itemCount()) }}</span>
                         <span>{{ Money::format($order->total) }}</span>

@@ -111,6 +111,7 @@ class OrderService
 
         self::sendMail($order->email, new OrderPlaced($order));
         self::sendMail(Setting::get('contact_email'), new NewOrderForShop($order));
+        AdminNotifier::order($order);
 
         return $order;
     }
