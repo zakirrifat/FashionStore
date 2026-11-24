@@ -217,6 +217,22 @@
     .rich th, .rich td { @apply border-b border-line px-3 py-2.5 text-left; }
     .rich th { @apply font-medium text-ink; }
 
+    /* Magazine-style rich text (About page). Same editor content, more editorial layout. */
+    .rich-editorial { @apply text-[16px] md:text-[17px] leading-[1.8]; }
+    .rich-editorial > * + * { @apply mt-6; }
+    /* First paragraph: large serif intro with a drop cap */
+    .rich-editorial > p:first-of-type { font-family: var(--font-serif); @apply text-[21px] md:text-[25px] leading-[1.45] tracking-[-0.01em] text-ink mb-10 md:mb-12; }
+    .rich-editorial > p:first-of-type::first-letter { font-family: var(--font-serif); font-style: normal; @apply float-left text-[4.4em] leading-[0.82] mr-3 mt-[0.06em] text-ink; }
+    /* Headings: short hairline above */
+    .rich-editorial h2 { @apply mt-16 md:mt-20 text-[28px] md:text-[34px]; }
+    .rich-editorial h2::before { content: ''; @apply block w-10 h-px bg-ink mb-6; }
+    /* Images: wider than the text column, soft corners */
+    .rich-editorial img { @apply block relative left-1/2 -translate-x-1/2 rounded-2xl my-12 md:my-16; width: min(60rem, 100vw - 3rem); max-width: none; }
+    /* Quotes: large centred pull quote */
+    .rich-editorial blockquote { @apply relative left-1/2 -translate-x-1/2 border-0 pl-0 text-center text-[26px] md:text-[34px] leading-[1.3] tracking-[-0.015em] my-16 md:my-20; width: min(48rem, 100vw - 3rem); }
+    .rich-editorial blockquote::before { content: '\201C'; font-family: var(--font-serif); @apply block text-[72px] md:text-[96px] leading-[0.6] text-mute not-italic mb-4; }
+    .rich-editorial blockquote p + p { @apply mt-4; }
+
     /* Header over a photo: white logo until the header turns solid */
 
     /* Skeleton shimmer */
