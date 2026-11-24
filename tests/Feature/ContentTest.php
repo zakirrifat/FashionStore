@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\ManageSettings;
+use App\Filament\Resources\Pages\Pages\EditPage;
 use App\Models\ContactMessage;
 use App\Models\Faq;
 use App\Models\Page;
@@ -121,5 +122,51 @@ class ContentTest extends TestCase
         $this->get('/admin/pages')->assertOk();
         $this->get('/admin/faqs')->assertOk();
         $this->get('/admin/contact-messages')->assertOk();
+    }
+
+    /* ───── About page: Meet Our Leadership ───── */
+
+    public function test_admin_can_add_leaders_to_the_about_page_only(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $about = Page::where('slug', 'about')->first();
+        $careers = Page::where('slug', 'careers')->first();
+
+        Livewire::test(EditPage::class, ['record' => $about->getRouteKey()])
+            ->assertFormFieldIsVisible('team_section.heading')
+            ->assertFormFieldIsDisabled('slug')
+            ->fillForm(['team_section' => [
+                'enabled' => true,
+                'heading' => 'Our People',
+                'subtitle' => 'Behind the brand.',
+                'shape' => 'circle',
+                'members' => [
+                    ['name' => 'Umar Faruk', 'designation' => 'Managing Director', 'tag' => 'Leadership', 'bio' => 'Leads the business.', 'link' => 'https://www.linkedin.com/in/umar'],
+                ],
+            ]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('Our People', $about->fresh()->team_section['heading']);
+        $this->assertSame('about', $about->fresh()->slug);
+
+        Livewire::test(EditPage::class, ['record' => $careers->getRouteKey()])
+            ->assertFormFieldIsHidden('team_section.heading');
+    }
+
+    public function test_about_page_shows_leaders_after_the_content(): void
+    {
+        Page::where('slug', 'about')->first()->update(['team_section' => [
+            'enabled' => true, 'heading' => 'Meet Our Leadership', 'subtitle' => 'Behind the brand.', 'shape' => 'portrait',
+            'members' => [['name' => 'Umar Faruk', 'designation' => 'Managing Director', 'tag' => 'Leadership', 'link' => 'javascript:alert(1)']],
+        ]]);
+
+        $this->get('/pages/about')->assertOk()
+            ->assertSeeInOrder(['Tell your brand story', 'Meet Our Leadership', '01 / Leadership', 'Umar Faruk', 'Managing Director'])
+            ->assertDontSee('javascript:alert', false);
+
+        Page::where('slug', 'about')->first()->update(['team_section' => ['enabled' => false, 'heading' => 'Meet Our Leadership', 'members' => [['name' => 'Umar Faruk']]]]);
+        $this->get('/pages/about')->assertOk()->assertDontSee('Meet Our Leadership');
     }
 }

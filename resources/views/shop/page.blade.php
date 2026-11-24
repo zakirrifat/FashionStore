@@ -11,6 +11,15 @@
             <p class="eyebrow text-mute mb-4" data-reveal>{{ config('app.name') }}</p>
             <h1 class="h1" data-split>{{ $page->title }}</h1>
         </header>
-        <div class="rich max-w-2xl mx-auto" data-reveal style="--d: 300ms">{!! $page->bodyHtml() !!}</div>
+        @if ($page->isAbout())
+            {{-- Each paragraph, image and quote fades in as you scroll --}}
+            <div class="rich rich-editorial max-w-2xl mx-auto" data-stagger="60">{!! $page->bodyHtml() !!}</div>
+        @else
+            <div class="rich max-w-2xl mx-auto" data-reveal style="--d: 300ms">{!! $page->bodyHtml() !!}</div>
+        @endif
     </article>
+
+    @if ($team = $page->teamSection())
+        @include('shop.partials.team-section', ['team' => $team])
+    @endif
 @endsection

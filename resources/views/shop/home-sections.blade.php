@@ -278,6 +278,7 @@
             @case('about')
                 <section class="grid lg:grid-cols-2 bg-paper-2 text-ink {{ $first ? '' : 'section-mt' }}">
                     <div class="flex flex-col justify-center gutter py-12 md:py-20 xl:px-16">
+                        @include('shop.partials.hanger-mark', ['align' => 'start'])
                         <h2 class="section-title" data-reveal>{{ $d['heading'] ?? '' }}</h2>
                         <p class="mt-5 md:mt-7 text-[15px] md:text-[17px] leading-relaxed text-ink-2 whitespace-pre-line md:text-justify" data-reveal style="--d: 150ms">{{ $d['body'] ?? '' }}</p>
                     </div>
@@ -296,11 +297,14 @@
             {{-- ───── What we offer (checklist) ───── --}}
             @case('offer')
                 <section class="bg-paper-2 text-ink py-12 md:py-16 {{ $first ? '' : 'section-mt' }}">
+                    @include('shop.partials.hanger-mark')
                     <h2 class="section-title text-center gutter" data-reveal>{{ $d['heading'] ?? '' }}</h2>
-                    <ul class="edge mt-8 md:mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 md:gap-y-5" data-stagger="40">
+                    {{-- Same spacing as before; the padding only gives the hover background room --}}
+                    <ul class="edge mt-8 md:mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 md:gap-y-1" data-stagger="40">
                         @foreach (array_filter($d['items'] ?? [], 'filled') as $item)
-                            <li class="flex items-start gap-3 text-[15px] md:text-[17px] leading-snug text-ink-2">
-                                <svg class="w-6 h-6 shrink-0 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
+                            <li class="group flex items-start gap-3 -mx-3 px-3 py-2 rounded-lg text-[15px] md:text-[17px] leading-snug text-ink-2
+                                       transition-colors duration-500 hover:bg-paper hover:text-ink">
+                                <svg class="w-6 h-6 shrink-0 text-ink transition-colors duration-500 group-hover:text-baby-deep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>
                                 <span class="pt-px">{{ $item }}</span>
                             </li>
                         @endforeach

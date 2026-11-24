@@ -52,6 +52,7 @@ class ContentSeeder extends Seeder
                 'footer_group' => $group,
                 'sort_order' => $sort,
                 'body' => preg_replace('/\s*\n\s*/', '', $body),
+                'team_section' => $slug === Page::ABOUT_SLUG ? Page::TEAM_SECTION_DEFAULTS : null,
             ]);
         }
 
