@@ -37,9 +37,19 @@ class AdminPanelProvider extends PanelProvider
                 isRequired: (bool) config('app.admin_require_2fa'),
             )
             ->brandName(config('app.name').' Admin')
+            // Uploaded logo (Store settings › Brand); falls back to the name above.
+            ->brandLogo(fn () => \App\Support\Brand::url('logo_dark'))
+            ->darkModeBrandLogo(fn () => \App\Support\Brand::url('logo_light'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(fn () => \App\Support\Brand::url('icon_32') ?? '/favicon.svg')
             ->colors([
                 'primary' => Color::Zinc,
             ])
+            // Bell in the top bar (see App\Services\AdminNotifier); red while there are unread alerts.
+            ->databaseNotifications(livewireComponent: \App\Livewire\AdminNotificationBell::class)
+            ->databaseNotificationsPolling('30s')
+            ->authenticatedRoutes(fn () => \Illuminate\Support\Facades\Route::post('alerts/open', \App\Http\Controllers\AdminAlertController::class)
+                ->name('alerts.open'))
             ->navigationGroups(['Catalogue', 'Sales', 'Content', 'People', 'Settings'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

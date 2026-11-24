@@ -3,7 +3,7 @@
 @section('title', 'Contact us')
 
 @section('content')
-    <div class="gutter max-w-6xl mx-auto pt-16 md:pt-24 grid md:grid-cols-[1fr_2fr] gap-12">
+    <div class="gutter max-w-6xl mx-auto pt-12 md:pt-16 grid md:grid-cols-[1fr_2fr] gap-12">
         <aside>
             <h1 class="h1 mb-8" data-split>Contact us</h1>
             <dl class="space-y-5">

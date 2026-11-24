@@ -1,6 +1,5 @@
 @extends('shop.layout')
 @php
-    use App\Support\Money;
     use App\Support\Img;
     use App\Http\Controllers\ShopController;
 
@@ -9,12 +8,15 @@
     $lengths = $variants->pluck('length')->filter()->unique()->values();
     $stockMap = $variants->map(fn ($v) => [
         'id' => $v->id, 'size' => $v->size, 'length' => $v->length, 'stock' => $v->stock,
-        'price' => Money::format($v->effectivePrice()),
     ]);
     $details = collect(preg_split('/\r\n|\r|\n/', (string) $product->details))->map(fn ($l) => trim($l, " \t-•"))->filter();
     $images = $colour->images;
     $inStock = $variants->sum('stock') > 0;
     $saved = \App\Support\Wishlist::has($product, $colour);
+    $enquiry = [
+        'id' => $product->id, 'name' => $product->name, 'image' => $images->first()?->url(400),
+        'colourId' => $colour->id, 'colour' => $colour->name,
+    ];
 @endphp
 
 @section('title', $product->seo_title ?: $product->name.' – '.$colour->name)
@@ -33,13 +35,7 @@
         'image' => $images->map(fn ($i) => $i->url(1200))->values(),
         'color' => $colour->name,
         'brand' => ['@type' => 'Brand', 'name' => config('app.name')],
-        'offers' => [
-            '@type' => 'Offer',
-            'url' => $product->url($colour),
-            'priceCurrency' => 'ZAR',
-            'price' => number_format($product->price / 100, 2, '.', ''),
-            'availability' => $inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-        ],
+        'url' => $product->url($colour),
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endpush
 
@@ -47,7 +43,7 @@
 <div id="product-root"
      x-data="productBuy({ variants: @js($stockMap), length: @js($lengths->first()), hasLengths: {{ $lengths->isNotEmpty() ? 'true' : 'false' }} })">
   <div x-data="lightbox(@js($images->map(fn ($i) => ['src' => $i->url(2400), 'alt' => $i->alt ?: $product->name])->values()))">
-    <div class="lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(380px,1fr)]">
+    <div class="lg:grid lg:grid-cols-[minmax(0,1.4fr)_minmax(360px,1fr)] shop-w lg:pt-6 lg:px-8">
 
         {{-- ───── Gallery ───── --}}
         <div>
@@ -61,7 +57,7 @@
                                  @if ($loop->first) fetchpriority="high" @else loading="lazy" @endif>
                         </button>
                     @empty
-                        <div class="img-frame w-full aspect-[3/4]"></div>
+                        <div class="img-frame w-full aspect-[3/4] grid place-items-center font-serif text-[28px] text-mute/40 px-6 text-center">{{ $product->name }}</div>
                     @endforelse
                 </div>
                 @if ($images->count() > 1)
@@ -74,18 +70,22 @@
                 @endif
             </div>
 
-            {{-- Desktop: editorial grid, first image full width --}}
-            <div class="hidden lg:grid grid-cols-2 gap-1">
+            {{-- Desktop: two-up grid of equal 3:4 photos (≈410×550 at full width).
+                 Odd number of photos: the first one spans both columns (4:5) so the grid never ends on an empty cell.
+                 A single photo stays the same size, centred in the gallery column. --}}
+            @php $leadWide = $images->count() > 1 && $images->count() % 2 === 1; @endphp
+            <div class="hidden lg:grid gap-1 {{ $images->count() > 1 ? 'grid-cols-2' : 'grid-cols-1 max-w-[560px] mx-auto' }}">
                 @forelse ($images as $image)
-                    <button type="button" class="img-frame block cursor-zoom-in {{ $loop->first ? 'col-span-2 aspect-[4/5]' : 'aspect-[3/4]' }}"
+                    @php $wide = $leadWide && $loop->first; @endphp
+                    <button type="button" class="img-frame block cursor-zoom-in {{ $wide ? 'col-span-2 aspect-[4/5]' : 'aspect-[3/4]' }}"
                             @click="show({{ $loop->index }})" data-reveal="{{ $loop->first ? 'fade' : 'mask' }}" aria-label="Zoom image {{ $loop->iteration }}">
-                        <img src="{{ $image->url($loop->first ? 1600 : 1200) }}" srcset="{{ Img::srcset($image->path, [800, 1200, 1600, 2400]) }}"
-                             sizes="{{ $loop->first ? '62vw' : '31vw' }}" alt="{{ $image->alt ?: $product->name.' – '.$colour->name }}"
+                        <img src="{{ $image->url(800) }}" srcset="{{ Img::srcset($image->path, [800, 1200, 1600, 2400]) }}"
+                             sizes="{{ $wide ? '(min-width: 1440px) 840px, 60vw' : '(min-width: 1440px) 420px, 30vw' }}" alt="{{ $image->alt ?: $product->name.' – '.$colour->name }}"
                              class="img-fade w-full h-full object-cover transition-transform duration-[1400ms] ease-[var(--ease-out-quint)] hover:scale-[1.02]"
                              @if ($loop->first) fetchpriority="high" @else loading="lazy" decoding="async" @endif>
                     </button>
                 @empty
-                    <div class="img-frame col-span-2 aspect-[4/5] grid place-items-center font-serif text-[32px] text-[#cfcbc1]">{{ $product->name }}</div>
+                    <div class="img-frame aspect-[3/4] grid place-items-center font-serif text-[32px] text-mute/40">{{ $product->name }}</div>
                 @endforelse
             </div>
         </div>
@@ -112,20 +112,16 @@
                         <span class="sr-only" x-text="saved ? 'In your wishlist' : 'Add to wishlist'">{{ $saved ? 'In your wishlist' : 'Add to wishlist' }}</span>
                     </button>
                 </div>
-                <p class="mt-3 text-[15px]" data-reveal style="--d: 150ms">
-                    @if ($product->isOnSale())
-                        <span class="text-sale">{{ Money::format($product->price) }}</span>
-                        <s class="text-mute ml-2">{{ Money::format($product->compare_at_price) }}</s>
-                    @else
-                        {{ Money::format($product->price) }}
-                    @endif
-                </p>
                 @if ($product->tagline)
                     <p class="text-mute mt-3" data-reveal style="--d: 200ms">{{ $product->tagline }}</p>
                 @endif
+                {{-- Where a price would sit: says clearly that this is a catalogue, not a missing price --}}
+                <p class="eyebrow text-[10px] text-mute mt-4 flex items-center gap-3" data-reveal style="--d: 220ms">
+                    <span class="w-6 h-px bg-line-strong"></span>Price on request
+                </p>
 
                 {{-- Colours --}}
-                <div class="mt-9" data-reveal style="--d: 250ms">
+                <div class="mt-8" data-reveal style="--d: 250ms">
                     <p class="label mb-3">Colour <span class="text-mute normal-case tracking-normal font-normal ml-1">{{ $colour->name }}</span></p>
                     @if ($product->colours->count() > 1)
                         <div class="flex flex-wrap gap-2">
@@ -182,15 +178,12 @@
                     </div>
                 @endif
 
-                <div class="mt-4 space-y-2" data-reveal style="--d: 400ms" x-ref="buy"
+                <div class="{{ $sizes->isNotEmpty() ? 'mt-4' : 'mt-8' }} space-y-2" data-reveal style="--d: 400ms" x-ref="buy"
                      x-init="new IntersectionObserver(([e]) => $dispatch('buy-visible', e.isIntersecting)).observe($el)">
-                    @if ($inStock)
-                        <button type="button" class="btn-black" @click="add()" :disabled="adding">
-                            <span x-text="adding ? 'Adding…' : 'Add to bag'">Add to bag</span>
-                        </button>
-                    @else
-                        <button type="button" class="btn-black" disabled>Sold out</button>
-                    @endif
+                    <button type="button" class="btn-black" @click="ask(@js($enquiry))">Ask for price</button>
+                    @unless ($inStock)
+                        <p class="text-[12px] text-mute">Currently sold out — ask us and we’ll let you know when it’s back.</p>
+                    @endunless
                 </div>
 
                 <ul class="mt-6 space-y-1.5 text-[12px] text-mute" data-reveal style="--d: 450ms">
@@ -251,21 +244,17 @@
         </div>
     </div>
 
-    {{-- ───── Sticky add-to-bag bar (phones, when the main button is off screen) ───── --}}
-    @if ($inStock)
+    {{-- ───── Sticky "Ask for price" bar (phones, when the main button is off screen) ───── --}}
         <div x-data="{ show: false }" @buy-visible.window="show = !$event.detail" x-show="show" x-cloak
              x-transition:enter="transition duration-500 ease-[var(--ease-out-quint)]" x-transition:enter-start="translate-y-full"
              x-transition:leave="transition duration-300" x-transition:leave-end="translate-y-full"
              class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-paper/95 backdrop-blur-md border-t border-line px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] flex items-center gap-3">
             <div class="flex-1 min-w-0">
                 <p class="label truncate">{{ $product->name }}</p>
-                <p class="text-[12px] text-mute">{{ Money::format($product->price) }} <span x-text="size ? '· ' + size : ''"></span></p>
+                <p class="text-[12px] text-mute">{{ $colour->name }} <span x-text="size ? '· ' + size : ''"></span></p>
             </div>
-            <button type="button" class="btn-black w-auto px-6"
-                    @click="size ? add() : document.getElementById('sizes')?.scrollIntoView({ behavior: 'smooth', block: 'center' })"
-                    x-text="size ? 'Add to bag' : 'Select size'">Select size</button>
+            <button type="button" class="btn-black w-auto px-6" @click="ask(@js($enquiry))">Ask for price</button>
         </div>
-    @endif
 
     {{-- ───── Full-screen zoom ───── --}}
     <template x-teleport="body">
@@ -316,17 +305,17 @@
 
 {{-- ───── Complete the look ───── --}}
 @if ($related->isNotEmpty())
-    <section class="pt-24">
-        <div class="gutter mb-8"><h2 class="h1" data-split>Complete the look</h2></div>
+    <section class="section" data-rail-group>
+        @include('shop.partials.section-head', ['title' => 'Complete the look', 'eyebrow' => 'Pairs well with', 'arrows' => true])
         <div class="relative">
-            <div class="rail gutter" data-rail data-stagger="80">
+            <div class="rail edge" data-rail data-stagger="80">
                 @foreach ($related as $product)
-                    <div class="snap-start shrink-0 w-[72vw] sm:w-[44vw] md:w-[31vw] xl:w-[23.5vw]">
-                        @include('shop.partials.product-card', ['sizes' => '(min-width: 1280px) 24vw, (min-width: 768px) 31vw, 72vw'])
+                    <div class="rail-card">
+                        @include('shop.partials.product-card', ['sizes' => '(min-width: 1440px) 340px, (min-width: 1280px) 24vw, (min-width: 768px) 31vw, 72vw'])
                     </div>
                 @endforeach
             </div>
-            <div class="gutter"><div class="h-px bg-line relative overflow-hidden"><span data-rail-progress class="absolute inset-y-0 left-0 bg-ink transition-transform duration-150"></span></div></div>
+            <div class="edge"><div class="h-px bg-line relative overflow-hidden"><span data-rail-progress class="absolute inset-y-0 left-0 bg-ink transition-transform duration-150"></span></div></div>
         </div>
     </section>
 @endif

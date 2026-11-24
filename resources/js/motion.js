@@ -32,17 +32,48 @@ export function initSmoothScroll() {
 export function initHeader() {
     const header = document.querySelector('[data-header]');
     if (!header) return;
-    let last = window.scrollY;
     const overlay = header.hasAttribute('data-overlay');
-    const update = () => {
+    const zone = document.querySelector('[data-header-zone]');
+    // Mouse/trackpad: header hides once you scroll and comes back when the pointer reaches the top.
+    // Touch screens can't hover, so there it comes back when you scroll up a little.
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    let last = window.scrollY;
+    let hovering = false;
+    let scrollUpShow = false;
+    let hideTimer = null;
+
+    const busy = () => header.classList.contains('is-open') || header.matches(':focus-within');
+    const apply = () => {
         const y = window.scrollY;
-        const down = y > last && y > 120;
-        header.classList.toggle('-translate-y-full', down && !header.matches(':hover, :focus-within'));
+        const scrolled = y > 80;
+        if (!canHover) {
+            if (y < last - 4) scrollUpShow = true;
+            else if (y > last + 4) scrollUpShow = false;
+        }
+        const show = !scrolled || busy() || (canHover ? hovering : scrollUpShow);
+        header.classList.toggle('-translate-y-full', !show);
         if (overlay) header.classList.toggle('is-solid', y > 40);
+        zone?.classList.toggle('hidden', !(canHover && scrolled));
         last = y;
     };
-    window.addEventListener('scroll', update, { passive: true });
-    update();
+
+    const enter = () => {
+        clearTimeout(hideTimer);
+        hovering = true;
+        apply();
+    };
+    const leave = () => {
+        hovering = false;
+        hideTimer = setTimeout(apply, 300); // small delay so it doesn't flicker
+    };
+    header.addEventListener('mouseenter', enter);
+    header.addEventListener('mouseleave', leave);
+    zone?.addEventListener('mouseenter', enter);
+    header.addEventListener('focusin', apply);
+    header.addEventListener('focusout', () => setTimeout(apply, 0));
+    new MutationObserver(apply).observe(header, { attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('scroll', apply, { passive: true });
+    apply();
 }
 
 /** Run on page load and again on any new HTML (load more, colour switch…). */
@@ -127,12 +158,22 @@ function parallax(root) {
     });
 }
 
-/** Horizontal product rows: drag with the mouse, progress bar underneath. */
+/** Horizontal product rows: drag with the mouse, progress bar underneath, optional prev/next arrows. */
 function rails(root) {
     root.querySelectorAll('[data-rail]:not([data-rail-done])').forEach((rail) => {
         const bar = rail.parentElement.querySelector('[data-rail-progress]');
+        const group = rail.closest('[data-rail-group]');
+        const prev = group?.querySelector('[data-rail-prev]');
+        const next = group?.querySelector('[data-rail-next]');
+        const arrows = group?.querySelector('[data-rail-arrows]');
+        const step = (dir) => rail.scrollBy({ left: dir * rail.clientWidth * 0.8, behavior: reducedMotion ? 'auto' : 'smooth' });
+        prev?.addEventListener('click', () => step(-1));
+        next?.addEventListener('click', () => step(1));
         const update = () => {
             const max = rail.scrollWidth - rail.clientWidth;
+            if (prev) prev.disabled = rail.scrollLeft <= 2;
+            if (next) next.disabled = rail.scrollLeft >= max - 2;
+            if (arrows) arrows.style.visibility = max > 4 ? 'visible' : 'hidden';
             if (bar) {
                 bar.style.width = `${Math.max(12, (rail.clientWidth / rail.scrollWidth) * 100)}%`;
                 bar.style.transform = `translateX(${max > 0 ? (rail.scrollLeft / max) * ((rail.scrollWidth / rail.clientWidth) - 1) * 100 : 0}%)`;

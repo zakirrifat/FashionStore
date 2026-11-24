@@ -110,7 +110,7 @@
                 </template>
                 <div class="space-y-2">
                     <template x-for="m in methods" :key="m.id">
-                        <label class="flex items-center gap-4 border px-5 py-4 cursor-pointer transition-colors duration-300" :class="method === m.id ? 'border-ink bg-paper-2/50' : 'border-line hover:border-[#c9c5bb]'">
+                        <label class="flex items-center gap-4 border px-5 py-4 cursor-pointer transition-colors duration-300" :class="method === m.id ? 'border-ink bg-paper-2/50' : 'border-line hover:border-line-strong'">
                             <input type="radio" name="shipping_method_id" :value="m.id" x-model.number="method" @change="refresh()" class="radio">
                             <span class="flex-1"><span x-text="m.name"></span> <span class="text-mute text-[13px] block sm:inline" x-text="m.estimate ? m.estimate : ''"></span></span>
                             <span x-text="m.free ? 'Free' : m.price"></span>

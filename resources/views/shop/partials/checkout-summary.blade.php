@@ -2,7 +2,7 @@
 <ul class="space-y-3 mb-4">
     @foreach ($totals->lines as $p)
         <li class="flex gap-3">
-            <div class="w-14 shrink-0 aspect-[3/4] bg-neutral-100 overflow-hidden relative">
+            <div class="w-14 shrink-0 aspect-[3/4] bg-paper-2 overflow-hidden relative">
                 @if ($p->line->image)
                     <img src="{{ Img::url($p->line->image, 200) }}" alt="" class="w-full h-full object-cover">
                 @endif

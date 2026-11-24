@@ -45,6 +45,6 @@ class ProductVariant extends Model
     /** Price in cents: the variant override, or the product's base price. */
     public function effectivePrice(): int
     {
-        return $this->price ?? $this->colour->product->price;
+        return $this->price ?? $this->colour->product->price ?? 0;
     }
 }

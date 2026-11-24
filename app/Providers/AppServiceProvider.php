@@ -42,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        // Admin bell: clear alerts when the enquiry, order or message is handled.
+        \App\Services\AdminNotifier::registerListeners();
+
         // Main menu (top-level categories with two levels of children) for every shop page.
         // Shared data for every shop page, loaded once per request.
         View::composer('shop.*', function ($view) {

@@ -9,10 +9,10 @@
     @include('shop.partials.status')
 
     @if ($lines->isEmpty())
-        <div class="py-24 text-center max-w-md mx-auto">
+        <div class="bg-paper-2 px-6 py-14 md:py-20 text-center">
             <p class="h2 mb-3" data-reveal>Your bag is empty</p>
             <p class="text-mute mb-10" data-reveal style="--d: 100ms">Add something you love and it will appear here.</p>
-            <div data-reveal style="--d: 200ms"><a href="{{ route('shop.home') }}" class="btn-line">Continue shopping</a></div>
+            <div class="max-w-xs mx-auto" data-reveal style="--d: 200ms"><a href="{{ route('shop.home') }}" class="btn-line">Continue shopping</a></div>
         </div>
     @else
         <div class="lg:grid lg:grid-cols-[1fr_400px] lg:gap-16">

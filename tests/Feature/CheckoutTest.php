@@ -32,6 +32,7 @@ class CheckoutTest extends TestCase
         parent::setUp();
         $this->withoutVite();
         Mail::fake();
+        config(['shop.checkout_enabled' => true]); // off by default (catalogue mode); keep the checkout code tested
         $this->seed(ShippingSeeder::class); // ZA standard R100 (free ≥ R1 500), express R180, international R650
         Setting::saveMany(['contact_email' => 'shop@example.com']);
 
@@ -114,7 +115,7 @@ class CheckoutTest extends TestCase
         $order = Order::with('items')->sole();
         $response->assertRedirect($order->confirmationUrl());
 
-        $this->assertMatchesRegularExpression('/^FS-1\d{5}$/', $order->number);
+        $this->assertMatchesRegularExpression('/^OMR-1\d{5}$/', $order->number);
         $this->assertSame('awaiting_payment', $order->status);
         $this->assertSame('thandi@example.com', $order->email);
         $this->assertSame([230000, 0, 230000], [$order->subtotal, $order->shipping_total, $order->total]);

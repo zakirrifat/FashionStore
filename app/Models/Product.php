@@ -18,7 +18,7 @@ class Product extends Model
 
     public const STATUSES = ['draft' => 'Draft', 'active' => 'Active', 'archived' => 'Archived'];
 
-    public const GENDERS = ['woman' => 'Woman', 'man' => 'Man', 'unisex' => 'Unisex'];
+    public const GENDERS = ['woman' => 'Woman', 'man' => 'Man', 'girl' => 'Girl', 'boy' => 'Boy', 'unisex' => 'Unisex'];
 
     protected $fillable = [
         'name', 'slug', 'style_code', 'tagline', 'gender', 'description', 'details',

@@ -32,8 +32,8 @@ Route::get('/img/{width}/{path}', [\App\Http\Controllers\ImageController::class,
     ->whereNumber('width')
     ->where('path', '.*');
 
-/* ───────── Bag & checkout (guests and customers) ───────── */
-Route::controller(\App\Http\Controllers\CartController::class)->group(function () {
+/* ───────── Bag & checkout (guests and customers) — off in catalogue mode, see config/shop.php ───────── */
+Route::middleware('checkout')->controller(\App\Http\Controllers\CartController::class)->group(function () {
     Route::get('/bag', 'show')->name('bag');
     Route::get('/bag/drawer', 'drawer')->name('bag.drawer');
     Route::post('/bag', 'add')->name('bag.add')->middleware('throttle:60,1');
@@ -42,12 +42,17 @@ Route::controller(\App\Http\Controllers\CartController::class)->group(function (
     Route::post('/bag/discount', 'applyDiscount')->name('bag.discount')->middleware('throttle:10,1');
     Route::delete('/bag/discount', 'removeDiscount')->name('bag.discount.remove');
 });
-Route::controller(\App\Http\Controllers\CheckoutController::class)->group(function () {
+Route::middleware('checkout')->controller(\App\Http\Controllers\CheckoutController::class)->group(function () {
     Route::get('/checkout', 'show')->name('checkout');
     Route::get('/checkout/quote', 'quote')->name('checkout.quote')->middleware('throttle:120,1');
     Route::post('/checkout', 'place')->name('checkout.place')->middleware('throttle:10,1');
     Route::get('/order/{number}/{token}', 'confirmation')->name('order.show');
 });
+
+/* ───────── Ask for price ───────── */
+Route::post('/enquiry', [\App\Http\Controllers\EnquiryController::class, 'store'])
+    ->name('enquiry.store')
+    ->middleware('throttle:5,10');
 
 /* ───────── Wishlist (guests and customers) ───────── */
 Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');
@@ -75,13 +80,16 @@ Route::middleware('auth')->prefix('account')->name('account.')->controller(Accou
     Route::put('/details', 'updateProfile')->name('profile.update');
     Route::put('/password', 'updatePassword')->name('password.update');
 
-    Route::get('/orders', 'orders')->name('orders');
-    Route::get('/orders/{number}', 'order')->name('orders.show');
+    // Orders and delivery addresses only matter when checkout is on.
+    Route::middleware('checkout')->group(function () {
+        Route::get('/orders', 'orders')->name('orders');
+        Route::get('/orders/{number}', 'order')->name('orders.show');
 
-    Route::get('/addresses', 'addresses')->name('addresses');
-    Route::get('/addresses/new', 'createAddress')->name('addresses.create');
-    Route::post('/addresses', 'storeAddress')->name('addresses.store');
-    Route::get('/addresses/{address}/edit', 'editAddress')->name('addresses.edit');
-    Route::put('/addresses/{address}', 'updateAddress')->name('addresses.update');
-    Route::delete('/addresses/{address}', 'destroyAddress')->name('addresses.destroy');
+        Route::get('/addresses', 'addresses')->name('addresses');
+        Route::get('/addresses/new', 'createAddress')->name('addresses.create');
+        Route::post('/addresses', 'storeAddress')->name('addresses.store');
+        Route::get('/addresses/{address}/edit', 'editAddress')->name('addresses.edit');
+        Route::put('/addresses/{address}', 'updateAddress')->name('addresses.update');
+        Route::delete('/addresses/{address}', 'destroyAddress')->name('addresses.destroy');
+    });
 });

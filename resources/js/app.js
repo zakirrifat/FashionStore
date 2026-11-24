@@ -13,6 +13,57 @@ const money = (cents) => 'R ' + (cents / 100).toLocaleString('en-ZA', { minimumF
 
 Alpine.store('wishlist', { count: Number(body?.dataset.wishlistCount ?? 0) });
 
+/**
+ * Light / dark theme. The visitor's choice is remembered on this device;
+ * until they choose, the site follows their phone/computer setting.
+ * (The <head> script in layout.blade.php applies it before the page is drawn.)
+ */
+Alpine.store('theme', {
+    mode: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+    get dark() {
+        return this.mode === 'dark';
+    },
+    set(mode) {
+        if (mode === this.mode) return;
+        const apply = () => {
+            this.mode = mode;
+            document.documentElement.dataset.theme = mode;
+            document.querySelector('meta[name="theme-color"]')?.setAttribute('content', mode === 'dark' ? '#121110' : '#faf9f6');
+        };
+        try {
+            localStorage.setItem('theme', mode);
+        } catch (e) {
+            /* private mode: still switches for this page */
+        }
+        const root = document.documentElement;
+        if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            root.classList.add('theme-wipe');
+            document.startViewTransition(apply).finished.finally(() => root.classList.remove('theme-wipe'));
+        } else {
+            root.classList.add('theme-switching');
+            apply();
+            setTimeout(() => root.classList.remove('theme-switching'), 550);
+        }
+    },
+    toggle() {
+        this.set(this.dark ? 'light' : 'dark');
+    },
+});
+// Follow the device setting until the visitor picks a theme themselves.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    let saved = null;
+    try {
+        saved = localStorage.getItem('theme');
+    } catch (err) {
+        /* ignore */
+    }
+    if (saved !== 'light' && saved !== 'dark') {
+        const mode = e.matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = mode;
+        Alpine.store('theme').mode = mode;
+    }
+});
+
 Alpine.store('toast', {
     items: [],
     show(message, tone = 'ok') {
@@ -76,6 +127,58 @@ Alpine.store('bag', {
     },
 });
 
+/**
+ * "Ask for price" popup (one per page, in layout.blade.php).
+ * open({ id, name, image, colourId, colour, variantId, size }) from any product card or the product page.
+ */
+Alpine.store('enquiry', {
+    isOpen: false,
+    product: null,
+    form: { name: '', phone: '', email: '', message: '', website: '' },
+    errors: {},
+    sending: false,
+    sent: false,
+    thanks: '',
+    open(product) {
+        this.product = product;
+        this.errors = {};
+        this.sent = false;
+        this.form.message = '';
+        this.isOpen = true;
+    },
+    close() {
+        this.isOpen = false;
+    },
+    async submit() {
+        if (this.sending) return;
+        this.sending = true;
+        this.errors = {};
+        try {
+            const { data } = await window.axios.post('/enquiry', {
+                product_id: this.product.id,
+                colour_id: this.product.colourId || null,
+                variant_id: this.product.variantId || null,
+                ...this.form,
+            });
+            this.thanks = data.message;
+            this.sent = true;
+        } catch (e) {
+            const status = e.response?.status;
+            if (status === 422) {
+                this.errors = Object.fromEntries(Object.entries(e.response.data.errors || {}).map(([k, v]) => [k, v[0]]));
+            } else if (status === 429) {
+                this.errors = { form: 'You’ve sent several requests already. Please try again in a few minutes.' };
+            } else if (status === 404) {
+                this.errors = { form: 'Sorry, this product is no longer available.' };
+            } else {
+                this.errors = { form: 'Sorry, something went wrong. Please try again.' };
+            }
+        } finally {
+            this.sending = false;
+        }
+    },
+});
+
 /* ═════════════ Components ═════════════ */
 
 /** Heart / wishlist button. */
@@ -101,32 +204,293 @@ Alpine.data('wishlistButton', (productId, colourId, saved) => ({
     },
 }));
 
-/** Full-screen search with live results. */
+/**
+ * Home page banner slideshow (any number of slides).
+ * Auto-advances every `seconds`; pauses on hover and when the tab is hidden;
+ * swipe on phones, arrows/keys on desktop. No autoplay for "reduce motion" visitors.
+ */
+Alpine.data('heroSlider', (cfg) => ({
+    index: 0,
+    count: cfg.count,
+    seconds: cfg.seconds,
+    paused: false,
+    running: false,
+    timer: null,
+    startedAt: 0,
+    remaining: 0,
+    touchX: 0,
+    touchY: 0,
+    reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    init() {
+        if (this.count < 2) return;
+        this.running = !this.reduced;
+        this.restart();
+        document.addEventListener('visibilitychange', () => (document.hidden ? this.pause() : this.resume()));
+    },
+    /** Start the full timer for the current slide, and get the next slide ready. */
+    restart() {
+        this.remaining = this.seconds * 1000;
+        this.prepareNext();
+        this.schedule();
+    },
+    /** Get the next and previous slides ready, so either direction shows a loaded image. */
+    prepareNext() {
+        this.prepare((this.index + 1) % this.count);
+        this.prepare((this.index - 1 + this.count) % this.count);
+    },
+    /** Make sure a slide's image is decoded and its video is buffering before it appears. */
+    prepare(i) {
+        const next = this.$el.querySelector(`[data-slide="${i}"]`);
+        if (!next) return;
+        const img = next.querySelector('img');
+        if (img) {
+            img.loading = 'eager';
+            img.decode?.().catch(() => {});
+        }
+        const video = next.querySelector('video');
+        if (video && video.preload !== 'auto') {
+            video.preload = 'auto';
+            video.load();
+        }
+    },
+    schedule() {
+        clearTimeout(this.timer);
+        if (!this.running || this.paused || document.hidden) return;
+        this.startedAt = Date.now();
+        this.timer = setTimeout(() => this.next(), this.remaining);
+    },
+    pause() {
+        if (this.paused || this.count < 2) return;
+        this.paused = true;
+        clearTimeout(this.timer);
+        this.remaining = Math.max(400, this.remaining - (Date.now() - this.startedAt));
+    },
+    resume() {
+        if (!this.paused) return;
+        this.paused = false;
+        this.schedule();
+    },
+    go(i) {
+        const target = (i + this.count) % this.count;
+        if (target === this.index) return;
+        this.index = target;
+        this.syncMedia();
+        this.replayText();
+        this.restart();
+    },
+    next() {
+        this.go(this.index + 1);
+    },
+    prev() {
+        this.go(this.index - 1);
+    },
+    touchStart(e) {
+        this.touchX = e.touches[0].clientX;
+        this.touchY = e.touches[0].clientY;
+    },
+    touchEnd(e) {
+        const dx = e.changedTouches[0].clientX - this.touchX;
+        const dy = e.changedTouches[0].clientY - this.touchY;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) dx < 0 ? this.next() : this.prev();
+    },
+    /** Only the visible slide's video plays. */
+    syncMedia() {
+        this.$el.querySelectorAll('[data-slide]').forEach((slide) => {
+            const video = slide.querySelector('video');
+            if (!video) return;
+            if (Number(slide.dataset.slide) === this.index) {
+                video.currentTime = 0;
+                video.play().catch(() => {});
+            } else {
+                video.pause();
+            }
+        });
+    },
+    /** Re-run the headline / button entrance on the slide that just appeared. */
+    replayText() {
+        const slide = this.$el.querySelector(`[data-slide="${this.index}"] [data-slide-text]`);
+        if (!slide || this.reduced) return;
+        const items = slide.querySelectorAll('[data-reveal], [data-split]');
+        items.forEach((el) => el.classList.remove('is-in'));
+        void slide.offsetWidth;
+        setTimeout(() => items.forEach((el) => el.classList.add('is-in')), 250);
+    },
+}));
+
+const RECENT_SEARCHES_KEY = 'recent-searches';
+
+/** Recent searches stay in this browser only. */
+function readRecentSearches() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY));
+        return Array.isArray(saved) ? saved.filter((s) => typeof s === 'string').slice(0, 5) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveRecentSearches(list) {
+    try {
+        if (list.length) localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
+        else localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch {
+        // Private browsing can block storage; search still works.
+    }
+}
+
+/** Search panel: suggestions before typing, live results while typing, keyboard navigation. */
 Alpine.data('search', () => ({
     open: false,
     q: '',
     results: [],
+    categories: [],
+    featured: [],
+    featuredLabel: 'Featured',
+    discoverLoaded: false,
+    recent: [],
     loading: false,
+    failed: false,
+    searched: null,
+    requestId: 0,
     timer: null,
+    previousOverflow: '',
+    init() {
+        this.recent = readRecentSearches();
+        // Coming back with the browser's Back button: don't restore an open panel.
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) this.close(false);
+        });
+    },
+    get term() {
+        return this.q.trim();
+    },
+    get idle() {
+        return this.term.length < 2;
+    },
+    get hasMatches() {
+        return !this.idle && (this.results.length > 0 || this.categories.length > 0);
+    },
+    get noResults() {
+        return !this.idle && !this.loading && !this.failed && this.searched === this.term && !this.hasMatches;
+    },
+    get showDiscover() {
+        return this.idle || this.noResults;
+    },
     toggle() {
-        this.open = !this.open;
-        if (this.open) this.$nextTick(() => this.$refs.input?.focus());
+        if (this.open) this.close();
+        else this.show();
+    },
+    show() {
+        this.open = true;
+        this.recent = readRecentSearches();
+        this.previousOverflow = document.documentElement.style.overflow;
+        document.documentElement.style.overflow = 'hidden';
+        this.loadDiscover();
+        this.$nextTick(() => this.$refs.input?.focus({ preventScroll: true }));
+    },
+    close(restoreFocus = true) {
+        // Esc with the price popup on top closes only the popup.
+        if (!this.open || Alpine.store('enquiry').isOpen) return;
+        this.open = false;
+        document.documentElement.style.overflow = this.previousOverflow;
+        if (restoreFocus) this.$refs.trigger?.focus({ preventScroll: true });
+    },
+    async loadDiscover() {
+        if (this.discoverLoaded) return;
+        try {
+            const { data } = await window.axios.get('/search/suggest');
+            this.featured = data.featured ?? [];
+            this.featuredLabel = data.featured_label ?? 'Featured';
+            this.discoverLoaded = true;
+        } catch {
+            // Categories still show; try again next time the panel opens.
+        }
+    },
+    resetResults() {
+        this.requestId++;
+        this.results = [];
+        this.categories = [];
+        this.searched = null;
+        this.failed = false;
+        this.loading = false;
     },
     type() {
         clearTimeout(this.timer);
-        if (this.q.trim().length < 2) {
-            this.results = [];
+        this.failed = false;
+        if (this.idle) {
+            this.resetResults();
             return;
         }
+        const term = this.term;
+        const id = ++this.requestId;
         this.timer = setTimeout(async () => {
             this.loading = true;
             try {
-                const { data } = await window.axios.get('/search/suggest', { params: { q: this.q } });
-                this.results = data.results;
+                const { data } = await window.axios.get('/search/suggest', { params: { q: term } });
+                if (id !== this.requestId) return; // a newer search has started
+                this.results = data.results ?? [];
+                this.categories = data.categories ?? [];
+                this.searched = term;
+            } catch {
+                if (id !== this.requestId) return;
+                this.results = [];
+                this.categories = [];
+                this.failed = true;
             } finally {
-                this.loading = false;
+                if (id === this.requestId) this.loading = false;
             }
         }, 220);
+    },
+    clearQuery() {
+        clearTimeout(this.timer);
+        this.q = '';
+        this.resetResults();
+        this.$refs.input?.focus();
+    },
+    submit(event) {
+        if (!this.term) {
+            event.preventDefault();
+            this.$refs.input?.focus();
+            return;
+        }
+        this.remember();
+    },
+    remember(value = this.term) {
+        const term = value.trim();
+        if (term.length < 2) return;
+        const lower = term.toLowerCase();
+        this.recent = [term, ...this.recent.filter((s) => s.toLowerCase() !== lower)].slice(0, 5);
+        saveRecentSearches(this.recent);
+    },
+    clearRecent() {
+        this.recent = [];
+        saveRecentSearches([]);
+        this.$refs.input?.focus();
+    },
+    /** Up/Down moves through the visible links; typing returns to the field. */
+    nav(event) {
+        const input = this.$refs.input;
+        const current = document.activeElement;
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            if (event.key === 'ArrowUp' && current === input) return;
+            const options = [...this.$refs.panel.querySelectorAll('[data-search-option]')].filter((el) => el.offsetParent !== null);
+            if (!options.length) return;
+            event.preventDefault();
+            const index = options.indexOf(current);
+            if (event.key === 'ArrowDown') {
+                options[index < 0 ? 0 : Math.min(index + 1, options.length - 1)].focus();
+            } else if (index <= 0) {
+                input.focus();
+            } else {
+                options[index - 1].focus();
+            }
+            return;
+        }
+
+        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey && current?.tagName === 'A') {
+            input.focus();
+        }
     },
 }));
 
@@ -158,6 +522,15 @@ Alpine.data('productBuy', (cfg) => ({
         this.message = '';
         await Alpine.store('bag').add(this.selected.id, 1);
         this.adding = false;
+    },
+    /** Open "Ask for price" with the chosen colour and (optional) size. */
+    ask(product) {
+        const v = this.selected;
+        Alpine.store('enquiry').open({
+            ...product,
+            variantId: v?.id ?? null,
+            size: v ? [v.size, v.length].filter(Boolean).join(' ') : null,
+        });
     },
 }));
 

@@ -118,7 +118,7 @@ class ProductCsv
             if ($v('gender') !== '') {
                 in_array($v('gender'), array_keys(Product::GENDERS), true)
                     ? $p['fields']['gender'] ??= $v('gender')
-                    : $err('gender must be woman, man or unisex.');
+                    : $err('gender must be one of: '.implode(', ', array_keys(Product::GENDERS)).'.');
             }
             foreach (['price', 'compare_at_price'] as $f) {
                 if ($v($f) !== '') {
@@ -170,7 +170,7 @@ class ProductCsv
                 $errors[] = "{$style}: this product is in the bin. Restore it first.";
             }
             if (! $product) {
-                foreach (['name', 'price'] as $f) {
+                foreach (config('shop.checkout_enabled') ? ['name', 'price'] : ['name'] as $f) {
                     if (! isset($p['fields'][$f])) {
                         $errors[] = "{$style}: new product needs a {$f} (on at least one of its rows).";
                     }
