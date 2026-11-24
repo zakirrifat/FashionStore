@@ -68,11 +68,14 @@ class ProductForm
                                     ->inline(false),
                             ]),
 
-                            Section::make('Price (ZAR)')->columns(2)->schema([
-                                self::money('price', 'Price')->required(),
-                                self::money('compare_at_price', 'Was price')
-                                    ->helperText('Shows the product as on sale'),
-                            ]),
+                            Section::make('Price (ZAR)')
+                                ->description(config('shop.checkout_enabled') ? null : 'For your own records only — prices are not shown in the shop. Customers use “Ask for price”.')
+                                ->columns(2)->schema([
+                                    self::money('price', 'Price')->required(fn () => (bool) config('shop.checkout_enabled')),
+                                    self::money('compare_at_price', 'Was price')
+                                        ->helperText('Shows the product as on sale')
+                                        ->visible(fn () => (bool) config('shop.checkout_enabled')),
+                                ]),
 
                             Section::make('Where it appears')->columns(2)->schema([
                                 Select::make('categories')

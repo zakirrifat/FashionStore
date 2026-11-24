@@ -19,6 +19,7 @@ class AccountTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        config(['shop.checkout_enabled' => true]); // addresses/orders are off by default (catalogue mode)
     }
 
     private function customer(array $attrs = []): User

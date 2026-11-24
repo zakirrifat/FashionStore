@@ -13,7 +13,7 @@ class EditCategory extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            \App\Filament\Resources\Categories\Tables\CategoriesTable::guardDelete(DeleteAction::make()),
         ];
     }
 }

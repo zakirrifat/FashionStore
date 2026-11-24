@@ -4,8 +4,10 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\ContactMessages\ContactMessageResource;
 use App\Filament\Resources\Customers\CustomerResource;
+use App\Filament\Resources\PriceEnquiries\PriceEnquiryResource;
 use App\Filament\Resources\Products\ProductResource;
 use App\Models\ContactMessage;
+use App\Models\PriceEnquiry;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Setting;
@@ -36,6 +38,7 @@ class StoreStats extends StatsOverviewWidget
 
         $unread = ContactMessage::whereNull('read_at')->count();
         $wishlistAdds = WishlistItem::where('created_at', '>=', now()->subDays(30))->count();
+        $newEnquiries = PriceEnquiry::where('status', 'new')->count();
 
         return [
             Stat::make('Live products', Product::where('status', 'active')->count())
@@ -57,14 +60,11 @@ class StoreStats extends StatsOverviewWidget
             Stat::make('Wishlist saves', $wishlistAdds)
                 ->description('last 30 days')
                 ->icon('heroicon-o-heart'),
-            Stat::make('Sales this month', \App\Support\Money::format(
-                (int) \App\Models\Order::whereIn('status', ['paid', 'shipped', 'delivered'])->where('paid_at', '>=', now()->startOfMonth())->sum('total')
-            ))
-                ->description(($awaiting = \App\Models\Order::where('status', 'awaiting_payment')->count()).' awaiting payment · '
-                    .\App\Models\Order::where('status', 'paid')->count().' to ship')
-                ->color($awaiting > 0 ? 'warning' : 'success')
-                ->icon('heroicon-o-banknotes')
-                ->url(\App\Filament\Resources\Orders\OrderResource::getUrl()),
+            Stat::make('New price enquiries', $newEnquiries)
+                ->description(PriceEnquiry::where('created_at', '>=', now()->subDays(30))->count().' in the last 30 days')
+                ->color($newEnquiries > 0 ? 'warning' : 'gray')
+                ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                ->url(PriceEnquiryResource::getUrl()),
         ];
     }
 }

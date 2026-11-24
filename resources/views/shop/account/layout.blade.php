@@ -2,13 +2,9 @@
 
 @section('content')
     @php
-        $links = [
-            'account.overview' => 'Overview',
-            'account.orders' => 'Orders',
-            'account.profile' => 'My details',
-            'account.addresses' => 'Addresses',
-            'wishlist' => 'Wishlist',
-        ];
+        $links = config('shop.checkout_enabled')
+            ? ['account.overview' => 'Overview', 'account.orders' => 'Orders', 'account.profile' => 'My details', 'account.addresses' => 'Addresses', 'wishlist' => 'Wishlist']
+            : ['account.overview' => 'Overview', 'account.profile' => 'My details', 'wishlist' => 'Wishlist'];
     @endphp
     <div class="gutter container-x pt-12 md:pt-20 lg:grid lg:grid-cols-[220px_1fr] lg:gap-20">
         <nav aria-label="Account" class="mb-10 lg:mb-0" data-reveal>

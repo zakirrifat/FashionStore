@@ -8,7 +8,7 @@
 @endpush
 
 @section('content')
-<div class="gutter max-w-5xl mx-auto pt-16 md:pt-24">
+<div class="gutter max-w-5xl mx-auto pt-12 md:pt-16">
     <header class="text-center mb-14">
         @if ($justPlaced)
             <svg class="draw-check w-16 h-16 mx-auto mb-8" viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">

@@ -40,7 +40,9 @@ class CategoryForm
                         ->getOptionLabelFromRecordUsing(fn (Category $record) => $record->full_name)
                         ->searchable()
                         ->preload()
-                        ->placeholder('None (top level, e.g. Woman)'),
+                        // "Add subcategory" in the list links here with ?parent=<id>.
+                        ->default(fn () => Category::whereKey(request()->integer('parent'))->value('id'))
+                        ->placeholder('None (top level, e.g. Woman, Man, Kids)'),
                     TextInput::make('sort_order')
                         ->numeric()
                         ->default(0)

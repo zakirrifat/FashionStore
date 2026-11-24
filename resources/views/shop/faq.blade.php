@@ -3,10 +3,10 @@
 @section('title', 'FAQs')
 
 @section('content')
-    <div class="gutter max-w-4xl mx-auto pt-16 md:pt-24">
+    <div class="gutter max-w-4xl mx-auto pt-12 md:pt-16">
         <p class="eyebrow text-mute mb-5" data-reveal>Help</p>
         <h1 class="h1 mb-6" data-split>Frequently asked questions</h1>
-        <p class="lead text-mute mb-16" data-reveal style="--d: 200ms">Can’t find your answer? <a href="{{ route('shop.contact') }}" class="link-u text-ink">Contact us</a>.</p>
+        <p class="lead text-mute mb-12" data-reveal style="--d: 200ms">Can’t find your answer? <a href="{{ route('shop.contact') }}" class="link-u text-ink">Contact us</a>.</p>
 
         @forelse ($faqs as $topic => $items)
             <section class="mb-14 md:grid md:grid-cols-[220px_1fr] md:gap-10" data-reveal>

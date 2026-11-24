@@ -32,6 +32,12 @@ class OrderResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    /** Hidden (menu and URLs) while checkout is switched off — see config/shop.php. */
+    public static function canAccess(): bool
+    {
+        return config('shop.checkout_enabled') && parent::canAccess();
+    }
+
     protected static ?string $recordTitleAttribute = 'number';
 
     /** Orders waiting for the team to arrange payment. */

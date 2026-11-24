@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductColour;
 use App\Models\User;
 use App\Models\WishlistItem;
+use App\Services\AdminNotifier;
 use Illuminate\Support\Collection;
 
 /**
@@ -46,6 +47,7 @@ class Wishlist
             $added
                 ? WishlistItem::firstOrCreate(['user_id' => $user->id, 'product_id' => $product->id, 'product_colour_id' => $colour?->id])
                 : WishlistItem::where(['user_id' => $user->id, 'product_id' => $product->id, 'product_colour_id' => $colour?->id])->delete();
+            AdminNotifier::wishlistChanged($user, $added);
         } else {
             $keys = collect(session(self::SESSION_KEY, []));
             $key = self::key($product->id, $colour?->id);
@@ -82,15 +84,22 @@ class Wishlist
     /** Move a guest's session wishlist into the user's account. */
     public static function mergeGuestInto(User $user): void
     {
+        $merged = false;
+
         foreach (session()->pull(self::SESSION_KEY, []) as $key) {
             [$productId, $colourId] = array_pad(explode(':', $key), 2, null);
             if (Product::whereKey($productId)->exists()) {
-                WishlistItem::firstOrCreate([
+                $item = WishlistItem::firstOrCreate([
                     'user_id' => $user->id,
                     'product_id' => (int) $productId,
                     'product_colour_id' => $colourId === '' || $colourId === null ? null : (int) $colourId,
                 ]);
+                $merged = $merged || $item->wasRecentlyCreated;
             }
+        }
+
+        if ($merged) {
+            AdminNotifier::wishlistChanged($user, true); // one alert for everything saved as a guest
         }
     }
 

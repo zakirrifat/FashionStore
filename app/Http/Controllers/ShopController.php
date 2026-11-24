@@ -62,8 +62,7 @@ class ShopController extends Controller
                     $query->where('is_featured', true)->latest('updated_at');
                     break;
                 case 'sale':
-                    $query->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price')->latest();
-                    break;
+                    return null; // prices are hidden in the shop, so "on sale" rows are not shown
                 case 'collection':
                     $collection = Collection::where('is_active', true)->find($d['collection_id'] ?? 0);
                     if (! $collection) {
@@ -103,7 +102,7 @@ class ShopController extends Controller
 
         return $this->listing($request, $query, [
             'title' => $category->name,
-            'heading' => $category->parent ? $category->parent->name.'’s '.$category->name : $category->name,
+            'heading' => $category->parent ? self::possessive($category->parent->name).' '.$category->name : $category->name,
             'description' => $category->description,
             'chips' => $category->children->isNotEmpty() ? $category->children : ($category->parent?->children()->where('is_active', true)->get() ?? collect()),
             'current' => $category,
@@ -159,7 +158,7 @@ class ShopController extends Controller
     {
         $term = trim((string) $request->query('q', ''));
         if (mb_strlen($term) < 2) {
-            return response()->json(['results' => []]);
+            return response()->json(['results' => [], 'categories' => [], ...$this->searchDiscover()]);
         }
 
         $products = Product::visible()
@@ -170,14 +169,66 @@ class ShopController extends Controller
                 ->orWhereHas('categories', fn ($c) => $c->where('name', 'like', "%{$term}%")))
             ->with(['colours.images', 'colours.variants'])
             ->orderByDesc('is_featured')->latest()
-            ->take(12)->get();
+            ->take(9)->get();
 
-        return response()->json(['results' => $products->map(fn (Product $p) => [
+        // Only categories the shop menu can reach (the category and its parents are all active).
+        $categories = \App\Models\Category::where('is_active', true)
+            ->where('name', 'like', "%{$term}%")
+            ->with('parent.parent')
+            ->orderBy('sort_order')
+            ->take(20)->get()
+            ->filter(fn ($c) => ($c->parent?->is_active ?? true) && ($c->parent?->parent?->is_active ?? true))
+            ->take(5)
+            ->map(fn ($c) => [
+                'name' => collect([$c->parent?->parent?->name, $c->parent?->name, $c->name])->filter()->implode(' / '),
+                'url' => route('shop.category', $c),
+            ])->values();
+
+        return response()->json([
+            'results' => $products->map(fn (Product $p) => $this->searchCard($p)),
+            'categories' => $categories,
+        ]);
+    }
+
+    /** Products shown before typing: featured ones, or the newest if none are featured. */
+    private function searchDiscover(): array
+    {
+        $query = Product::visible()->with('colours.images')->latest();
+        $products = (clone $query)->where('is_featured', true)->take(4)->get();
+        $label = 'Featured';
+
+        if ($products->isEmpty()) {
+            $products = $query->take(4)->get();
+            $label = 'New in';
+        }
+
+        return [
+            'featured' => $products->map(function (Product $p) {
+                $card = $this->searchCard($p);
+                $colour = $p->colours->first();
+
+                return $card + ['enquiry' => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'image' => $card['image'],
+                    'colourId' => $colour?->id,
+                    'colour' => $colour?->name,
+                ]];
+            })->values(),
+            'featured_label' => $label,
+        ];
+    }
+
+    private function searchCard(Product $p): array
+    {
+        $colour = $p->colours->first();
+
+        return [
             'name' => $p->name,
             'url' => $p->url(),
-            'price' => \App\Support\Money::format($p->price),
-            'image' => ($path = $p->colours->first()?->images->first()?->path) ? \App\Support\Img::url($path, 400) : null,
-        ])]);
+            'colour' => $colour?->name,
+            'image' => ($path = $colour?->images->first()?->path) ? \App\Support\Img::url($path, 400) : null,
+        ];
     }
 
     public function product(Request $request, Product $product): View
@@ -220,15 +271,13 @@ class ShopController extends Controller
 
         $selectedSizes = array_filter((array) $request->query('size', []));
         $selectedColours = array_filter((array) $request->query('colour', []));
-        $sort = $request->query('sort', 'featured');
+        $sort = in_array($request->query('sort'), ['featured', 'newest'], true) ? $request->query('sort') : 'featured';
 
         $query
             ->when($selectedSizes, fn ($q) => $q->whereHas('colours.variants', fn ($v) => $v->whereIn('size', $selectedSizes)->where('stock', '>', 0)))
             ->when($selectedColours, fn ($q) => $q->whereHas('colours', fn ($c) => $c->whereIn('name', $selectedColours)));
 
         match ($sort) {
-            'price-asc' => $query->orderBy('price'),
-            'price-desc' => $query->orderByDesc('price'),
             'newest' => $query->latest(),
             default => $query->orderByDesc('is_featured')->latest(),
         };
@@ -246,6 +295,12 @@ class ShopController extends Controller
             'banner' => $data['banner'] ?? null,
             'searchTerm' => $data['searchTerm'] ?? null,
         ]);
+    }
+
+    /** "Woman’s Jeans", but "Girls’ Jeans" rather than "Girls’s Jeans". */
+    private static function possessive(string $name): string
+    {
+        return str_ends_with(mb_strtolower($name), 's') ? $name.'’' : $name.'’s';
     }
 
     private function breadcrumbs(Category $category): array

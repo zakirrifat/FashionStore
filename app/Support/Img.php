@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 
@@ -72,12 +73,27 @@ class Img
         return $resized;
     }
 
+    /** Width ÷ height of an uploaded image (remembered, so pages don't re-read the file). Null if unknown. */
+    public static function ratio(?string $path): ?float
+    {
+        if (blank($path) || ! self::canResize($path) || ! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return Cache::rememberForever('img-ratio:'.md5($path), function () use ($path) {
+            $size = @getimagesize(Storage::disk('public')->path($path));
+
+            return $size && $size[1] > 0 ? $size[0] / $size[1] : null;
+        });
+    }
+
     /** Delete every resized copy of an image (when the original is removed or replaced). */
     public static function forget(?string $path): void
     {
         if (blank($path)) {
             return;
         }
+        Cache::forget('img-ratio:'.md5($path));
         foreach (self::WIDTHS as $w) {
             Storage::disk('public')->delete(self::resizedPath($path, $w));
         }

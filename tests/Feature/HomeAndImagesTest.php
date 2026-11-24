@@ -115,7 +115,7 @@ class HomeAndImagesTest extends TestCase
     public function test_home_page_renders_saved_sections_in_order(): void
     {
         $this->product('Old Coat');
-        $new = $this->product('Silk Scarf', ['compare_at_price' => 200000]);
+        $new = $this->product('Silk Shirt', ['compare_at_price' => 200000]);
         $collection = Collection::create(['name' => 'Gift Guide', 'slug' => 'gift-guide']);
         $new->collections()->attach($collection);
 
@@ -128,9 +128,10 @@ class HomeAndImagesTest extends TestCase
         ]]);
 
         $this->get('/')->assertOk()
-            ->assertSeeInOrder(['Winter Collection', 'Gifts', 'Silk Scarf', 'On sale', 'Our story'])
+            ->assertSeeInOrder(['Winter Collection', 'Gifts', 'Silk Shirt', 'Our story'])
             ->assertSee(route('shop.collection', 'gift-guide'), false)  // automatic "Shop all" link
-            ->assertDontSee('Old Coat')                                // not in the collection, not on sale
+            ->assertDontSee('On sale')                                 // prices are hidden, so sale rows are skipped
+            ->assertDontSee('Old Coat')                                // not in the collection
             ->assertDontSee('Deleted collection')                      // broken section is skipped
             ->assertDontSee('New season');                              // automatic home page not used
     }
@@ -153,6 +154,51 @@ class HomeAndImagesTest extends TestCase
         $saved = Setting::get('home_sections');
         $this->assertSame(['text', 'products'], array_column($saved, 'type'));
         $this->assertSame('Hello', $saved[0]['data']['heading']);
+    }
+
+    public function test_admin_can_add_an_about_section_shown_on_the_home_page(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'staff']));
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $image = $this->storeImage('home/about.jpg');
+
+        Livewire::test(ManageHomePage::class)
+            ->fillForm(['sections' => [
+                Str::uuid()->toString() => ['type' => 'about', 'data' => ['heading' => 'Who We Are', 'body' => 'Started in 2004.', 'image' => [Str::uuid()->toString() => $image]]],
+            ]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame($image, Setting::get('home_sections')[0]['data']['image']);
+
+        $this->get('/')->assertOk()
+            ->assertSeeInOrder(['Who We Are', 'Started in 2004.'])
+            ->assertSee(Img::url($image, 1200), false);
+    }
+
+    public function test_admin_can_add_a_what_we_offer_section(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'staff']));
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(ManageHomePage::class)
+            ->fillForm(['sections' => [
+                Str::uuid()->toString() => ['type' => 'offer', 'data' => ['heading' => 'What we can offer', 'items' => [
+                    Str::uuid()->toString() => ['text' => 'Factory & Product Sourcing'],
+                    Str::uuid()->toString() => ['text' => 'Sampling Follow-up'],
+                ]]],
+            ]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(['Factory & Product Sourcing', 'Sampling Follow-up'], array_values(Setting::get('home_sections')[0]['data']['items']));
+
+        // Reopening the admin page and saving again keeps the options.
+        Livewire::test(ManageHomePage::class)->call('save')->assertHasNoFormErrors();
+        $this->assertSame(['Factory & Product Sourcing', 'Sampling Follow-up'], array_values(Setting::get('home_sections')[0]['data']['items']));
+
+        $this->get('/')->assertOk()
+            ->assertSeeInOrder(['What we can offer', 'Factory &amp; Product Sourcing', 'Sampling Follow-up'], false);
     }
 
     public function test_home_page_links_must_be_local_paths_or_web_addresses(): void

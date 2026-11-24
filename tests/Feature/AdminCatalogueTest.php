@@ -110,7 +110,7 @@ class AdminCatalogueTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $product = Product::create([
-            'name' => 'Wool scarf', 'slug' => 'wool-scarf', 'style_code' => 'CA0001',
+            'name' => 'Wool coat', 'slug' => 'wool-coat', 'style_code' => 'CA0001',
             'price' => 150000, 'status' => 'active',
         ]);
 

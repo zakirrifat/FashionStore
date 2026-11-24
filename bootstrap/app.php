@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Signed-in customers who open /login or /register go to their account.
         $middleware->redirectUsersTo(fn () => route('account.overview'));
         $middleware->redirectGuestsTo(fn () => route('login'));
+
+        $middleware->alias(['checkout' => \App\Http\Middleware\EnsureCheckoutEnabled::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

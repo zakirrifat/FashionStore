@@ -11,13 +11,13 @@
 
 @section('content')
     @if ($banner)
-        <section class="relative h-[70svh] min-h-[420px] overflow-hidden bg-ink">
+        <section class="relative h-[70svh] min-h-[420px] overflow-hidden bg-night">
             <div class="absolute inset-[-8%_0]" data-parallax="0.18">
                 <img src="{{ Img::url($banner, 1600) }}" srcset="{{ Img::srcset($banner, [800, 1200, 1600, 2400]) }}" sizes="100vw"
                      alt="" fetchpriority="high" class="kenburns absolute inset-0 w-full h-full object-cover">
             </div>
             <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-black/10"></div>
-            <div class="absolute inset-x-0 bottom-0 gutter pb-12 text-paper">
+            <div class="absolute inset-x-0 bottom-0 edge pb-12 text-day">
                 <h1 class="display" data-split data-delay="200">{{ $heading }}</h1>
             </div>
         </section>
@@ -26,7 +26,7 @@
     <div x-data="listing">
         {{-- Title --}}
         @unless ($banner)
-            <header class="gutter pt-12 md:pt-16 pb-6">
+            <header class="edge pt-10 md:pt-12 pb-6">
                 @if (count($breadcrumbs) > 1)
                     <nav class="eyebrow text-mute mb-5 flex flex-wrap gap-x-2" aria-label="Breadcrumb" data-reveal>
                         @foreach ($breadcrumbs as $crumb)
@@ -41,9 +41,9 @@
             </header>
         @endunless
 
-        {{-- Sticky toolbar: sub-categories, count, grid size, filter --}}
-        <div class="sticky top-16 z-30 bg-paper/90 backdrop-blur-md border-y border-line">
-            <div class="gutter h-12 flex items-center gap-6">
+        {{-- Toolbar: sub-categories, count, grid size, filter (stays in place; scrolls with the page) --}}
+        <div class="relative bg-paper border-y border-line">
+            <div class="edge h-12 flex items-center gap-6">
                 <div class="flex-1 min-w-0 flex gap-5 overflow-x-auto label whitespace-nowrap [scrollbar-width:none]">
                     @foreach ($chips as $chip)
                         <a href="{{ route('shop.category', $chip) }}" class="link-draw {{ $current && $current->id === $chip->id ? 'is-active' : 'text-mute hover:text-ink' }}">{{ $chip->name }}</a>
@@ -72,7 +72,7 @@
 
         {{-- Grid --}}
         @if ($products->isEmpty())
-            <div class="gutter py-32 text-center">
+            <div class="edge py-8 md:py-10"><div class="bg-paper-2 px-6 py-14 md:py-20 text-center">
                 <p class="h2 mb-3" data-reveal>No products found</p>
                 <p class="text-mute mb-8" data-reveal style="--d: 120ms">Try removing a filter, or explore something new.</p>
                 <div class="flex justify-center gap-3" data-reveal style="--d: 200ms">
@@ -81,9 +81,9 @@
                     @endif
                     <a href="{{ route('shop.home') }}" class="btn-dark-outline">Go to home</a>
                 </div>
-            </div>
+            </div></div>
         @else
-            <div class="gutter pt-2">
+            <div class="edge pt-2">
                 <div x-ref="grid" data-grid data-stagger="60"
                      class="grid grid-cols-2 gap-x-1 md:gap-x-2 transition-[grid-template-columns] duration-500"
                      :class="{ 'md:grid-cols-2': cols === 2, 'md:grid-cols-3': cols === 3, 'md:grid-cols-3 xl:grid-cols-4': cols === 4 }">
@@ -120,7 +120,7 @@
                         <details class="border-b border-line pb-5" open x-data="{ o: true }">
                             <summary class="label cursor-pointer list-none flex justify-between py-2">Sort by <span>+</span></summary>
                             <div class="pt-2 space-y-2.5">
-                                @foreach (['featured' => 'Recommended', 'newest' => 'Newest', 'price-asc' => 'Price: low to high', 'price-desc' => 'Price: high to low'] as $value => $label)
+                                @foreach (['featured' => 'Recommended', 'newest' => 'Newest'] as $value => $label)
                                     <label class="flex items-center gap-3 cursor-pointer">
                                         <input type="radio" name="sort" value="{{ $value }}" @checked($sort === $value) class="radio"> {{ $label }}
                                     </label>
