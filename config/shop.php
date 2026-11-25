@@ -18,6 +18,7 @@ return [
     'defaults' => [
         'contact_email' => 'hello@example.com',
         'contact_phone' => '',
+        'contact_whatsapp' => '',     // international format, e.g. +27 82 123 4567 — shown on the Contact page
         'contact_hours' => 'Monday to Friday, 9am – 5pm SAST',
         'contact_address' => '',
 

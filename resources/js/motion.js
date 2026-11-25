@@ -104,26 +104,54 @@ function staggerChildren(root) {
     });
 }
 
-/** Wrap each visual line of a headline so lines can rise one after another. */
+/**
+ * Wrap each visual line of a headline so lines can rise one after another.
+ * Lines are measured only once the web fonts have loaded (the fallback font has
+ * different widths, which would break lines in the wrong place), and measured
+ * again when the window width changes.
+ */
+const splitEls = new Set();
 function splitLines(root) {
-    root.querySelectorAll('[data-split]:not([data-split-done])').forEach((el) => {
+    const els = [...root.querySelectorAll('[data-split]:not([data-split-done])')];
+    if (!els.length) return;
+    els.forEach((el) => {
         const text = el.textContent.trim().replace(/\s+/g, ' ');
+        el.dataset.splitText = text;
         el.setAttribute('aria-label', text);
-        el.innerHTML = text.split(' ').map((w) => `<span class="inline-block" aria-hidden="true">${escapeHtml(w)}</span>`).join(' ');
-        const words = [...el.children];
-        const lines = [];
-        words.forEach((w) => {
-            const top = w.offsetTop;
-            const line = lines.find((l) => Math.abs(l.top - top) < 4);
-            line ? line.words.push(w.textContent) : lines.push({ top, words: [w.textContent] });
-        });
-        el.innerHTML = lines
-            .map((l, i) => `<span class="line-mask" aria-hidden="true"><span class="line-inner" style="--d:${i * 110 + (Number(el.dataset.delay) || 0)}ms">${escapeHtml(l.words.join(' '))}</span></span>`)
-            .join('');
         el.setAttribute('data-split-done', '');
         if (!el.hasAttribute('data-reveal')) el.setAttribute('data-reveal', 'fade');
+        splitEls.add(el);
     });
+    const run = () => els.forEach(layoutLines);
+    document.fonts && document.fonts.status !== 'loaded' ? document.fonts.ready.then(run) : run();
 }
+
+function layoutLines(el) {
+    if (!el.isConnected) return splitEls.delete(el);
+    const text = el.dataset.splitText;
+    el.innerHTML = text.split(' ').map((w) => `<span class="inline-block" aria-hidden="true">${escapeHtml(w)}</span>`).join(' ');
+    const lines = [];
+    [...el.children].forEach((w) => {
+        const top = w.offsetTop;
+        const line = lines.find((l) => Math.abs(l.top - top) < 4);
+        line ? line.words.push(w.textContent) : lines.push({ top, words: [w.textContent] });
+    });
+    el.innerHTML = lines
+        .map((l, i) => `<span class="line-mask" aria-hidden="true"><span class="line-inner" style="--d:${i * 110 + (Number(el.dataset.delay) || 0)}ms">${escapeHtml(l.words.join(' '))}</span></span>`)
+        .join('');
+    el.dataset.splitWidth = el.clientWidth;
+}
+
+let splitResizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(splitResizeTimer);
+    splitResizeTimer = setTimeout(() => {
+        splitEls.forEach((el) => {
+            if (!el.isConnected) return splitEls.delete(el);
+            if (Number(el.dataset.splitWidth) !== el.clientWidth) layoutLines(el);
+        });
+    }, 150);
+});
 
 let io;
 function revealOnScroll(root) {

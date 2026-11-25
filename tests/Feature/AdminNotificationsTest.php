@@ -202,7 +202,7 @@ class AdminNotificationsTest extends TestCase
     public function test_opening_a_contact_message_from_the_alert_link_clears_it(): void
     {
         $this->post('/contact', [
-            'name' => 'Thandi', 'email' => 'a@example.com', 'subject' => 'Other', 'message' => 'Hello there, a question.',
+            'name' => 'Thandi', 'phone' => '+27 82 123 4567', 'email' => 'a@example.com', 'subject' => 'Other', 'message' => 'Hello there, a question.',
         ])->assertRedirect();
         $message = ContactMessage::firstOrFail();
         $this->assertSame(2, DatabaseNotification::whereNull('read_at')->count());
