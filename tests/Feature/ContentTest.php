@@ -155,6 +155,23 @@ class ContentTest extends TestCase
             ->assertFormFieldIsHidden('team_section.heading');
     }
 
+    public function test_about_page_shows_side_image_next_to_the_content(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        Livewire::test(EditPage::class, ['record' => Page::where('slug', 'careers')->first()->getRouteKey()])
+            ->assertFormFieldIsHidden('side_image');
+        Livewire::test(EditPage::class, ['record' => Page::where('slug', 'about')->first()->getRouteKey()])
+            ->assertFormFieldIsVisible('side_image');
+
+        $this->get('/pages/about')->assertOk()->assertDontSee('rich-split');
+
+        Page::where('slug', 'about')->first()->update(['side_image' => 'pages/about-side.jpg']);
+        $this->get('/pages/about')->assertOk()
+            ->assertSeeInOrder(['rich-split', 'Tell your brand story', 'about-side'], false);
+    }
+
     public function test_about_page_shows_leaders_after_the_content(): void
     {
         Page::where('slug', 'about')->first()->update(['team_section' => [

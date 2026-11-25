@@ -232,6 +232,9 @@
     .rich-editorial blockquote { @apply relative left-1/2 -translate-x-1/2 border-0 pl-0 text-center text-[26px] md:text-[34px] leading-[1.3] tracking-[-0.015em] my-16 md:my-20; width: min(48rem, 100vw - 3rem); }
     .rich-editorial blockquote::before { content: '\201C'; font-family: var(--font-serif); @apply block text-[72px] md:text-[96px] leading-[0.6] text-mute not-italic mb-4; }
     .rich-editorial blockquote p + p { @apply mt-4; }
+    /* Beside a picture: images and quotes stay inside the text column */
+    .rich-split img, .rich-split blockquote { @apply left-0 translate-x-0 w-full; }
+    .rich-split blockquote { @apply text-left; }
 
     /* Header over a photo: white logo until the header turns solid */
 

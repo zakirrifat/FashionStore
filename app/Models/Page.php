@@ -35,7 +35,7 @@ class Page extends Model
     ];
 
     protected $fillable = [
-        'title', 'slug', 'body', 'team_section', 'footer_group', 'sort_order', 'is_active', 'seo_title', 'seo_description',
+        'title', 'slug', 'body', 'side_image', 'team_section', 'footer_group', 'sort_order', 'is_active', 'seo_title', 'seo_description',
     ];
 
     protected function casts(): array

@@ -45,6 +45,16 @@ class PageForm
                         ->fileAttachmentsDisk('public')
                         ->fileAttachmentsDirectory('pages')
                         ->extraInputAttributes(['style' => 'min-height: 24rem']),
+                    // About page only: the content sits on the left and this picture on the right.
+                    FileUpload::make('side_image')
+                        ->label('Image beside the content (optional)')
+                        ->image()
+                        ->disk('public')
+                        ->directory('pages')
+                        ->maxSize(20480)
+                        ->imageEditor()
+                        ->visible(fn (?Page $record) => $record?->isAbout())
+                        ->helperText('Shown on the right of the text on desktop, below it on phones. Portrait or square, at least 1200 px wide.'),
                 ]),
                 self::teamSection(),
                 Grid::make(1)->columnSpan(1)->schema([
