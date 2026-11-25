@@ -107,6 +107,13 @@ class ManageSettings extends Page
                     ->schema([
                         TextInput::make('contact_email')->email()->required(),
                         TextInput::make('contact_phone')->tel(),
+                        TextInput::make('contact_whatsapp')
+                            ->label('WhatsApp number')
+                            ->tel()
+                            ->placeholder('+27 82 123 4567')
+                            ->helperText('With country code. Shown on the Contact page so customers can message you on WhatsApp. Leave empty to hide.')
+                            ->regex('/^\+[\d\s()-]{7,20}$/')
+                            ->validationMessages(['regex' => 'Start with + and the country code, e.g. +27 82 123 4567.']),
                         TextInput::make('contact_hours')->label('Opening hours'),
                         Textarea::make('contact_address')->label('Address')->rows(3),
                     ]),

@@ -65,21 +65,59 @@ class ContentTest extends TestCase
         Mail::fake();
 
         $this->post('/contact', [
-            'name' => 'Thandi', 'email' => 'thandi@example.com', 'subject' => 'Sizing advice',
+            'name' => 'Thandi', 'phone' => '+27 82 123 4567', 'email' => 'thandi@example.com', 'subject' => 'Sizing advice',
             'message' => 'Which size should I take in the jacket?',
         ])->assertRedirect('/contact')->assertSessionHas('sent');
 
-        $this->assertDatabaseHas('contact_messages', ['email' => 'thandi@example.com', 'subject' => 'Sizing advice']);
-        $this->get('/contact')->assertSee('Thank you');
+        $this->assertDatabaseHas('contact_messages', ['phone' => '+27 82 123 4567', 'email' => 'thandi@example.com', 'subject' => 'Sizing advice']);
+        $this->get('/contact')->assertSee('Thank you')->assertSee('+27 82 123 4567');
+    }
+
+    public function test_contact_form_email_is_optional(): void
+    {
+        Mail::fake();
+
+        $this->post('/contact', [
+            'name' => 'Sipho', 'phone' => '+27821234567', 'subject' => 'Delivery',
+            'message' => 'When will my parcel arrive?',
+        ])->assertSessionHasNoErrors()->assertSessionHas('sent');
+
+        $this->assertDatabaseHas('contact_messages', ['name' => 'Sipho', 'email' => null]);
+    }
+
+    public function test_contact_form_needs_phone_with_country_code(): void
+    {
+        $base = ['name' => 'Sipho', 'subject' => 'Delivery', 'message' => 'When will my parcel arrive?'];
+
+        $this->post('/contact', $base)->assertSessionHasErrors('phone');
+        $this->post('/contact', $base + ['phone' => '082 123 4567'])->assertSessionHasErrors('phone');
+        $this->post('/contact', $base + ['phone' => '+27 12'])->assertSessionHasErrors('phone');
+        $this->assertSame(0, ContactMessage::count());
+    }
+
+    public function test_contact_page_hides_whatsapp_when_not_set(): void
+    {
+        $this->get('/contact')->assertOk()->assertDontSee('wa.me', false);
+    }
+
+    public function test_contact_page_shows_whatsapp_when_set(): void
+    {
+        Setting::saveMany(['contact_whatsapp' => '+27 82 555 0101']);
+
+        $this->get('/contact')->assertOk()
+            ->assertSee('https://wa.me/27825550101?text=', false)
+            ->assertSee('Chat on WhatsApp')
+            ->assertDontSee('+27 82 555 0101'); // number stays hidden; only the button shows
+        $this->get('/')->assertDontSee('wa.me/27825550101', false); // contact page only
     }
 
     public function test_contact_form_validates_and_blocks_bots(): void
     {
         $this->post('/contact', ['name' => '', 'email' => 'nope', 'subject' => 'Hack', 'message' => 'hi'])
-            ->assertSessionHasErrors(['name', 'email', 'subject', 'message']);
+            ->assertSessionHasErrors(['name', 'phone', 'email', 'subject', 'message']);
 
         $this->post('/contact', [
-            'name' => 'Bot', 'email' => 'bot@example.com', 'subject' => 'Other',
+            'name' => 'Bot', 'phone' => '+27 82 123 4567', 'subject' => 'Other',
             'message' => 'Buy cheap things now!!!', 'website' => 'http://spam.example',
         ])->assertSessionHas('sent');
 

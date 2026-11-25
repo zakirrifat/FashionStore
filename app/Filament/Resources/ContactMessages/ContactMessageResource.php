@@ -41,8 +41,8 @@ class ContactMessageResource extends Resource
     {
         return $schema->columns(2)->components([
             TextEntry::make('name'),
-            TextEntry::make('email')->copyable(),
-            TextEntry::make('phone')->placeholder('—'),
+            TextEntry::make('phone')->copyable()->placeholder('—'),
+            TextEntry::make('email')->copyable()->placeholder('—'),
             TextEntry::make('order_number')->placeholder('—'),
             TextEntry::make('subject'),
             TextEntry::make('created_at')->label('Received')->dateTime(),
