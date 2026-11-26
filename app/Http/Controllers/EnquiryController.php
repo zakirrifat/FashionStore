@@ -65,13 +65,16 @@ class EnquiryController extends Controller
         \App\Services\AdminNotifier::priceEnquiry($enquiry);
 
         // Tell the shop. A mail failure must not lose the request — it's already saved and shown in admin.
+        // Sent after the reply reaches the visitor, so they don't wait for the mail server.
         $to = Setting::get('contact_email');
         if (filled($to)) {
-            try {
-                Mail::to($to)->send(new NewPriceEnquiry($enquiry));
-            } catch (\Throwable $e) {
-                Log::warning('Price enquiry email failed: '.$e->getMessage());
-            }
+            defer(function () use ($to, $enquiry) {
+                try {
+                    Mail::to($to)->send(new NewPriceEnquiry($enquiry));
+                } catch (\Throwable $e) {
+                    Log::warning('Price enquiry email failed: '.$e->getMessage());
+                }
+            });
         }
 
         return response()->json(['ok' => true, 'message' => self::THANKS]);

@@ -131,7 +131,7 @@ class ShopController extends Controller
 
     public function search(Request $request): View
     {
-        $term = trim((string) $request->query('q', ''));
+        $term = self::searchTerm($request);
 
         $query = Product::visible()->when($term !== '', function (Builder $q) use ($term) {
             $q->where(fn ($q) => $q
@@ -156,7 +156,7 @@ class ShopController extends Controller
     /** Live results for the search overlay. */
     public function suggest(Request $request): \Illuminate\Http\JsonResponse
     {
-        $term = trim((string) $request->query('q', ''));
+        $term = self::searchTerm($request);
         if (mb_strlen($term) < 2) {
             return response()->json(['results' => [], 'categories' => [], ...$this->searchDiscover()]);
         }
@@ -295,6 +295,14 @@ class ShopController extends Controller
             'banner' => $data['banner'] ?? null,
             'searchTerm' => $data['searchTerm'] ?? null,
         ]);
+    }
+
+    /** The visitor's search text, cut to 100 characters (longer text only makes the LIKE search slow). */
+    private static function searchTerm(Request $request): string
+    {
+        $q = $request->query('q', '');
+
+        return is_string($q) ? trim(mb_substr($q, 0, 100)) : '';
     }
 
     /** "Woman’s Jeans", but "Girls’ Jeans" rather than "Girls’s Jeans". */

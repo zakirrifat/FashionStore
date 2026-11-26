@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsAdminActivity;
+use App\Models\Concerns\WarmsImages;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,10 +13,17 @@ class Category extends Model
 {
     use LogsAdminActivity;
 
+    use WarmsImages;
+
     protected $fillable = [
         'parent_id', 'name', 'slug', 'description', 'image',
         'sort_order', 'is_active', 'seo_title', 'seo_description', 'size_guide_id',
     ];
+
+    public function resizableImages(): array
+    {
+        return [$this->image];
+    }
 
     public function sizeGuide(): BelongsTo
     {

@@ -66,24 +66,27 @@ class ContentController extends Controller
         \App\Services\AdminNotifier::contactMessage($message);
 
         // Notify the shop. A mail failure must not lose the message — it's already saved.
-        try {
-            Mail::raw(
-                "New message from {$message->name}\n"
-                ."Phone: {$message->phone}\n"
-                .($message->email ? "Email: {$message->email}\n" : '')
-                ."Subject: {$message->subject}\n"
-                .($message->order_number ? "Order: {$message->order_number}\n" : '')
-                ."\n{$message->message}\n\nView in admin: ".url('/admin/contact-messages'),
-                function ($mail) use ($message) {
-                    $mail->to(Setting::get('contact_email'))->subject('Contact form: '.$message->subject);
-                    if ($message->email) {
-                        $mail->replyTo($message->email, $message->name);
+        // Sent after the page reaches the visitor, so they don't wait for the mail server.
+        defer(function () use ($message) {
+            try {
+                Mail::raw(
+                    "New message from {$message->name}\n"
+                    ."Phone: {$message->phone}\n"
+                    .($message->email ? "Email: {$message->email}\n" : '')
+                    ."Subject: {$message->subject}\n"
+                    .($message->order_number ? "Order: {$message->order_number}\n" : '')
+                    ."\n{$message->message}\n\nView in admin: ".url('/admin/contact-messages'),
+                    function ($mail) use ($message) {
+                        $mail->to(Setting::get('contact_email'))->subject('Contact form: '.$message->subject);
+                        if ($message->email) {
+                            $mail->replyTo($message->email, $message->name);
+                        }
                     }
-                }
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Contact form email failed: '.$e->getMessage());
-        }
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Contact form email failed: '.$e->getMessage());
+            }
+        });
 
         return redirect()->route('shop.contact')->with('sent', [
             'name' => strtok(trim($message->name), ' '),

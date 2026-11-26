@@ -36,7 +36,7 @@ class CollectionForm
                         Textarea::make('description')->columnSpanFull(),
                         FileUpload::make('image')
                             ->label('Banner image')
-                            ->image()
+                            ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
                             ->disk('public')
                             ->directory('collections')
                             ->columnSpanFull(),

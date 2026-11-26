@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsAdminActivity;
+use App\Models\Concerns\WarmsImages;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 class Page extends Model
 {
     use LogsAdminActivity;
+
+    use WarmsImages;
 
     public const FOOTER_GROUPS = [
         'client_services' => 'Client services',
@@ -41,6 +44,12 @@ class Page extends Model
     protected function casts(): array
     {
         return ['is_active' => 'boolean', 'team_section' => 'array'];
+    }
+
+    /** The picture beside the content and the leadership photos. */
+    public function resizableImages(): array
+    {
+        return [$this->side_image, ...array_column($this->team_section['members'] ?? [], 'photo')];
     }
 
     public function scopeActive(Builder $query): Builder

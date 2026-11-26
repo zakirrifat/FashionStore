@@ -323,7 +323,7 @@ class ManageHomePage extends Page
     {
         return FileUpload::make($name)
             ->label($label)
-            ->image()
+            ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
             ->disk('public')
             ->directory('home')
             ->maxSize(20480);
@@ -358,20 +358,13 @@ class ManageHomePage extends Page
     {
         $paths = [];
         array_walk_recursive($sections, function ($value, $key) use (&$paths) {
-            if (is_string($key) && is_string($value) && preg_match('/(^|_)image$/', $key) && \App\Support\Img::canResize($value)) {
+            if (is_string($key) && is_string($value) && preg_match('/(^|_)image$/', $key)) {
                 $paths[] = $value;
             }
         });
 
-        foreach (array_unique($paths) as $path) {
-            foreach ([400, 800, 1200, 1600, 2400] as $width) {
-                try {
-                    \App\Support\Img::make($path, $width);
-                } catch (\Throwable $e) {
-                    report($e); // a broken image must not stop the save
-                }
-            }
-        }
+        // After the response: saving stays quick even with several large banners.
+        \App\Support\Img::warmLater($paths);
     }
 
     public function save(): void
@@ -380,7 +373,7 @@ class ManageHomePage extends Page
 
         Setting::saveMany(['home_sections' => $sections], 'Home page updated');
 
-        // Make the resized WebP copies now, so visitors never wait for them (banners can be large).
+        // Make the resized WebP copies straight away, so visitors never wait for them (banners can be large).
         $this->warmImages($sections);
 
         Notification::make()->success()->title('Home page saved')->send();

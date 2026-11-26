@@ -48,7 +48,7 @@ class PageForm
                     // About page only: the content sits on the left and this picture on the right.
                     FileUpload::make('side_image')
                         ->label('Image beside the content (optional)')
-                        ->image()
+                        ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
                         ->disk('public')
                         ->directory('pages')
                         ->maxSize(20480)
@@ -126,7 +126,7 @@ class PageForm
                     ->schema([
                         FileUpload::make('photo')
                             ->label('Photo')
-                            ->image()
+                            ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
                             ->disk('public')
                             ->directory('pages/team')
                             ->maxSize(10240)
