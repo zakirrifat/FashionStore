@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\ManageHomePage;
+use App\Models\Category;
 use App\Models\Collection;
 use App\Models\Product;
 use App\Models\Setting;
@@ -99,8 +100,67 @@ class HomeAndImagesTest extends TestCase
     {
         $this->product('Coat', ['is_featured' => true]);
 
-        $this->get('/')->assertOk()->assertSee('srcset=', false)->assertSee('/img/1600/products/coat.jpg', false);
-        $this->get('/p/coat')->assertOk()->assertSee('/img/2400/products/coat.jpg 2400w', false);
+        $this->get('/')->assertOk()->assertSee('srcset=', false)->assertSee('1200/products/coat.jpg', false);
+        // The photo is 1200px wide: its largest size is 1200w, not a slow, identical "2400w" copy.
+        $this->get('/p/coat')->assertOk()
+            ->assertSee(Img::url('products/coat.jpg', 1200).' 1200w', false)
+            ->assertDontSee('1600/products/coat.jpg', false)
+            ->assertDontSee('2400/products/coat.jpg', false);
+    }
+
+    public function test_srcset_stops_at_the_original_width(): void
+    {
+        $this->storeImage('home/wide.jpg', 2172, 724);
+
+        $this->assertSame(
+            implode(', ', [
+                url('/img/800/home/wide.jpg').' 800w',
+                url('/img/1200/home/wide.jpg').' 1200w',
+                url('/img/1600/home/wide.jpg').' 1600w',
+                url('/img/2400/home/wide.jpg').' 2172w', // full size, labelled with its real width
+            ]),
+            Img::srcset('home/wide.jpg', [800, 1200, 1600, 2400])
+        );
+
+        $this->storeImage('products/small.jpg', 500, 700);
+        $this->assertSame(
+            url('/img/400/products/small.jpg').' 400w, '.url('/img/800/products/small.jpg').' 500w',
+            Img::srcset('products/small.jpg')
+        );
+        $this->assertStringContainsString('/img/800/', Img::url('products/small.jpg', 2400), 'no bigger copy than needed');
+    }
+
+    public function test_saving_a_photo_makes_its_resized_copies_straight_away(): void
+    {
+        $this->withoutDefer();
+        $product = $this->product('Coat'); // 1200 × 1600 photo
+        $path = $product->colours->first()->images->first()->path;
+
+        foreach ([200, 400, 800, 1200] as $w) {
+            Storage::disk('public')->assertExists("_resized/{$w}/{$path}.webp");
+        }
+        Storage::disk('public')->assertMissing("_resized/1600/{$path}.webp");
+        Storage::disk('public')->assertMissing("_resized/2400/{$path}.webp");
+        $this->assertSame([], preg_grep('/\.tmp$/', Storage::disk('public')->allFiles('_resized')), 'no half-written files left');
+
+        // So the shop links straight to the files instead of the resizer.
+        $this->get('/p/coat')->assertOk()->assertSee("/storage/_resized/800/{$path}.webp", false)->assertDontSee('/img/800/', false);
+    }
+
+    public function test_saving_a_category_or_page_makes_resized_copies(): void
+    {
+        $this->withoutDefer();
+        $this->storeImage('categories/coats.jpg', 900, 600);
+        $this->storeImage('pages/side.jpg', 900, 600);
+        $this->storeImage('pages/team/ana.jpg', 300, 300);
+
+        Category::create(['name' => 'Coats', 'slug' => 'coats', 'image' => 'categories/coats.jpg']);
+        \App\Models\Page::create(['title' => 'About', 'slug' => 'about', 'side_image' => 'pages/side.jpg',
+            'team_section' => ['members' => [['name' => 'Ana', 'photo' => 'pages/team/ana.jpg']]]]);
+
+        Storage::disk('public')->assertExists('_resized/1200/categories/coats.jpg.webp');
+        Storage::disk('public')->assertExists('_resized/1200/pages/side.jpg.webp');
+        Storage::disk('public')->assertExists('_resized/400/pages/team/ana.jpg.webp');
     }
 
     /* ───── Home page editor ───── */
@@ -158,6 +218,7 @@ class HomeAndImagesTest extends TestCase
 
     public function test_admin_can_add_an_about_section_shown_on_the_home_page(): void
     {
+        $this->withoutDefer(); // resized copies are made on save, before the page below is viewed
         $this->actingAs(User::factory()->create(['role' => 'staff']));
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $image = $this->storeImage('home/about.jpg');

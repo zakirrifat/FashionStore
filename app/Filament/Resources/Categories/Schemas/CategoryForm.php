@@ -58,7 +58,7 @@ class CategoryForm
                         ->default(true),
                     Textarea::make('description')->columnSpanFull(),
                     FileUpload::make('image')
-                        ->image()
+                        ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
                         ->disk('public')
                         ->directory('categories')
                         ->columnSpanFull(),

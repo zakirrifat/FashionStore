@@ -23,7 +23,10 @@ class PasswordResetController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        Password::sendResetLink($request->only('email'));
+        // After the reply: the visitor doesn't wait for the mail server, and the reply takes
+        // the same time whether or not the account exists (no clue from the timing either).
+        $credentials = $request->only('email');
+        defer(fn () => Password::sendResetLink($credentials));
 
         // Same message whether or not the email exists, so accounts can't be discovered.
         return back()->with('status', 'If an account exists for that email, we’ve sent a link to reset your password.');

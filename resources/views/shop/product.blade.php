@@ -36,7 +36,7 @@
         'color' => $colour->name,
         'brand' => ['@type' => 'Brand', 'name' => config('app.name')],
         'url' => $product->url($colour),
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>{{-- HEX_* flags: text like "</script>" can't end the block early --}}
 @endpush
 
 @section('content')

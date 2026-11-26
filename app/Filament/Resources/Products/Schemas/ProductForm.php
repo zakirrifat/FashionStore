@@ -141,7 +141,7 @@ class ProductForm
                                         ->schema([
                                             FileUpload::make('path')
                                                 ->hiddenLabel()
-                                                ->image()
+                                                ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
                                                 ->disk('public')
                                                 ->directory('products')
                                                 ->maxSize(10240)

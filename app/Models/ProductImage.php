@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
 {
+    use Concerns\WarmsImages;
+
     protected $fillable = ['product_colour_id', 'path', 'alt', 'sort_order'];
 
     protected static function booted(): void
@@ -26,6 +28,11 @@ class ProductImage extends Model
                 Img::forget($old);
             }
         });
+    }
+
+    public function resizableImages(): array
+    {
+        return [$this->path];
     }
 
     public function colour(): BelongsTo
