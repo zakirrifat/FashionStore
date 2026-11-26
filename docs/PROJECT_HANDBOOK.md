@@ -395,7 +395,9 @@ Needs from owner: **hosting details** (VPS recommended, e.g. Hetzner/DigitalOcea
 - **https://omrtexfashions.com** — VPS `194.31.53.88` (Ubuntu 24.04, 1 CPU, 4 GB + 1 GB swap). DNS at Namecheap: A records `@` and `www` → the IP.
 - PHP 8.4-FPM, MySQL 8.0, Nginx, Composer, Let's Encrypt (auto-renews). **No Node** on the server — CSS/JS are built on the PC.
 - App in `/var/www/fashionstore` (branch `main`). SSH: `ssh -i ~/.ssh/fashionstore_ed25519 root@194.31.53.88`.
-- Secrets live only on the server: `.env`, `/root/.fashionstore-db.cnf` (database login), `/root/.fashionstore-admin.txt` (first admin login).
+- Secrets live only on the server: `.env`, `/root/.fashionstore-db.cnf` (database login).
+- Content: the local SQLite data + `storage/app/public` were copied to the live server on 26 November 2026 (backup of the
+  server before that: `/root/backups/`). **From now on the live admin is the real data** — don't copy local data over it again.
 - Still to do: email service (`MAIL_MAILER=log` for now), backups, firewall + deploy user + SSH hardening.
 
 ### Deploying updates
