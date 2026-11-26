@@ -391,6 +391,23 @@ Needs from owner: **hosting details** (VPS recommended, e.g. Hetzner/DigitalOcea
 8. Every team member sets up two-step sign-in; change the seeded admin password.
 9. Test on real iPhone/Android + Safari; Lighthouse ≥ 90.
 
+### Live server (set up 26 November 2026)
+- **https://omrtexfashions.com** — VPS `194.31.53.88` (Ubuntu 24.04, 1 CPU, 4 GB + 1 GB swap). DNS at Namecheap: A records `@` and `www` → the IP.
+- PHP 8.4-FPM, MySQL 8.0, Nginx, Composer, Let's Encrypt (auto-renews). **No Node** on the server — CSS/JS are built on the PC.
+- App in `/var/www/fashionstore` (branch `main`). SSH: `ssh -i ~/.ssh/fashionstore_ed25519 root@194.31.53.88`.
+- Secrets live only on the server: `.env`, `/root/.fashionstore-db.cnf` (database login), `/root/.fashionstore-admin.txt` (first admin login).
+- Still to do: email service (`MAIL_MAILER=log` for now), backups, firewall + deploy user + SSH hardening.
+
+### Deploying updates
+1. Merge the work into `main` on GitHub.
+2. On the PC: `git checkout main; git pull`
+3. `powershell -ExecutionPolicy Bypass -File scripts\deploy.ps1`
+
+The script refuses to run with uncommitted changes or when the folder isn't exactly at `origin/main` (the CSS must match the
+server's code). It builds CSS/JS from `E:\` (upper-case — building from `e:\` leaves the fonts out of the CSS), uploads them,
+puts the site in maintenance mode for a few seconds, pulls `main`, runs [`scripts/server-deploy.sh`](../scripts/server-deploy.sh)
+(composer, migrate, caches, **PHP-FPM reload — opcache never re-reads changed files on its own**), and checks the live site answers.
+
 ---
 
 ## 16. Gotchas learned while building
