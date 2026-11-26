@@ -278,8 +278,8 @@
             @case('about')
                 <section class="grid lg:grid-cols-2 bg-paper-2 text-ink {{ $first ? '' : 'section-mt' }}">
                     <div class="flex flex-col justify-center gutter py-12 md:py-20 xl:px-16">
-                        @include('shop.partials.hanger-mark', ['align' => 'start'])
-                        <h2 class="section-title" data-reveal>{{ $d['heading'] ?? '' }}</h2>
+                        @include('shop.partials.hanger-mark')
+                        <h2 class="section-title text-center" data-reveal>{{ $d['heading'] ?? '' }}</h2>
                         <p class="mt-5 md:mt-7 text-[15px] md:text-[17px] leading-relaxed text-ink-2 whitespace-pre-line md:text-justify" data-reveal style="--d: 150ms">{{ $d['body'] ?? '' }}</p>
                     </div>
                     {{-- The whole picture always shows; on phones and tablets the frame takes the picture's own shape --}}
