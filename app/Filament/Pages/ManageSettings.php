@@ -8,6 +8,7 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\ViewField;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -36,6 +37,9 @@ class ManageSettings extends Page
     protected static ?string $title = 'Store settings';
 
     public ?array $data = [];
+
+    /** Contact page background: how strongly the page colour covers the photo (opacity %). */
+    public const CONTACT_TINTS = ['light' => 'Light', 'medium' => 'Medium', 'strong' => 'Strong'];
 
     /** Only admins can change store settings. */
     public static function canAccess(): bool
@@ -116,6 +120,20 @@ class ManageSettings extends Page
                             ->validationMessages(['regex' => 'Start with + and the country code, e.g. +27 82 123 4567.']),
                         TextInput::make('contact_hours')->label('Opening hours'),
                         Textarea::make('contact_address')->label('Address')->rows(3),
+                        FileUpload::make('contact_background')
+                            ->label('Contact page background image (optional)')
+                            ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
+                            ->disk('public')
+                            ->directory('pages/contact')
+                            ->maxSize(20480)
+                            ->imageEditor()
+                            ->helperText('Fills the “Contact us” box behind the email, WhatsApp and hours. A calm photo works best, at least 1200 px wide. Leave empty for the plain colour.'),
+                        Select::make('contact_background_tint')
+                            ->label('Tint over the image')
+                            ->options(self::CONTACT_TINTS)
+                            ->default('medium')
+                            ->selectablePlaceholder(false)
+                            ->helperText('A layer of the page colour over the photo, so the text stays easy to read. Use “Strong” for busy photos.'),
                     ]),
 
                 Section::make('Product page')
@@ -219,6 +237,9 @@ class ManageSettings extends Page
         }
 
         Setting::saveMany($data, 'Store settings updated');
+
+        // Contact page background: make its resized copies now, so visitors don't wait for them.
+        \App\Support\Img::warmLater([$data['contact_background'] ?? null]);
 
         Notification::make()->success()->title($brandChanged ? 'Settings saved — logo and icons updated' : 'Settings saved')->send();
     }

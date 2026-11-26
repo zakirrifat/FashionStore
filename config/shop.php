@@ -21,6 +21,8 @@ return [
         'contact_whatsapp' => '',     // international format, e.g. +27 82 123 4567 — shown on the Contact page
         'contact_hours' => 'Monday to Friday, 9am – 5pm SAST',
         'contact_address' => '',
+        'contact_background' => null,          // Contact page box background (storage path), see Admin › Store settings
+        'contact_background_tint' => 'medium', // light | medium | strong
 
         'announcement_enabled' => false,
         'announcement_text' => '',

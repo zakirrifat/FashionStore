@@ -12,7 +12,9 @@ use App\Models\User;
 use Database\Seeders\ContentSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -150,6 +152,54 @@ class ContentTest extends TestCase
 
         $this->get('/')->assertSee('Winter sale now on')->assertSee('https://instagram.com/example');
         $this->get('/contact')->assertSee('+27 21 000 0000');
+    }
+
+    public function test_contact_box_has_plain_colour_without_a_background_image(): void
+    {
+        $this->get('/contact')->assertOk()
+            ->assertSee('<aside class="relative isolate overflow-hidden px-6 py-8 md:px-10 md:py-9 bg-paper-2/60">', false)
+            ->assertDontSee('pages/contact/', false);
+    }
+
+    public function test_admin_can_set_a_contact_page_background_image(): void
+    {
+        Storage::fake('public');
+        $this->withoutDefer();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(ManageSettings::class)
+            ->fillForm([
+                'contact_email' => 'shop@example.com',
+                'contact_background' => [UploadedFile::fake()->image('shop.jpg', 1600, 1000)],
+                'contact_background_tint' => 'strong',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $path = Setting::get('contact_background');
+        $this->assertStringStartsWith('pages/contact/', $path);
+        Storage::disk('public')->assertExists("_resized/800/{$path}.webp"); // made on save
+
+        $this->get('/contact')->assertOk()
+            ->assertSee("_resized/800/{$path}.webp", false)
+            ->assertSee('opacity-90', false) // strong tint
+            ->assertSee('<aside class="relative isolate overflow-hidden px-6 py-8 md:px-10 md:py-9">', false); // no plain colour behind the image
+    }
+
+    public function test_contact_background_must_be_a_photo(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        Livewire::test(ManageSettings::class)
+            ->fillForm([
+                'contact_email' => 'shop@example.com',
+                'contact_background' => [UploadedFile::fake()->createWithContent('x.svg', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>')],
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['contact_background']);
     }
 
     public function test_staff_cannot_open_store_settings(): void
