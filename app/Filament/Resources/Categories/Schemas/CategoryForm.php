@@ -62,6 +62,13 @@ class CategoryForm
                         ->disk('public')
                         ->directory('categories')
                         ->columnSpanFull(),
+                    FileUpload::make('header_image')
+                        ->label('Page header image')
+                        ->helperText('Wide picture shown behind the title at the top of this category’s page. The band is short and wide (about 10:1), so use a landscape photo around 2400 × 240 px; the edges may be cropped on smaller screens.')
+                        ->image()->acceptedFileTypes(\App\Support\Img::UPLOAD_TYPES)
+                        ->disk('public')
+                        ->directory('categories')
+                        ->columnSpanFull(),
                 ]),
                 Section::make('SEO')->collapsed()->schema([
                     TextInput::make('seo_title')->maxLength(70),

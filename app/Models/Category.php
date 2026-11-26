@@ -16,13 +16,13 @@ class Category extends Model
     use WarmsImages;
 
     protected $fillable = [
-        'parent_id', 'name', 'slug', 'description', 'image',
+        'parent_id', 'name', 'slug', 'description', 'image', 'header_image',
         'sort_order', 'is_active', 'seo_title', 'seo_description', 'size_guide_id',
     ];
 
     public function resizableImages(): array
     {
-        return [$this->image];
+        return [$this->image, $this->header_image];
     }
 
     public function sizeGuide(): BelongsTo

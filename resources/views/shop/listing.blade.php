@@ -26,9 +26,16 @@
     <div x-data="listing">
         {{-- Title --}}
         @unless ($banner)
-            <header class="edge pt-10 md:pt-12 pb-6">
+            <header class="edge pt-10 md:pt-12 pb-6 {{ $headerImage ? 'relative overflow-hidden bg-night text-day' : '' }}">
+                @if ($headerImage)
+                    {{-- Fills the band behind the title; the band keeps its normal height. --}}
+                    <img src="{{ Img::url($headerImage, 1600) }}" srcset="{{ Img::srcset($headerImage, [800, 1200, 1600, 2400]) }}" sizes="100vw"
+                         alt="" fetchpriority="high" class="absolute inset-0 w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/45 via-black/15 to-transparent"></div>
+                @endif
+                <div class="{{ $headerImage ? 'relative' : '' }}">
                 @if (count($breadcrumbs) > 1)
-                    <nav class="eyebrow text-mute mb-5 flex flex-wrap gap-x-2" aria-label="Breadcrumb" data-reveal>
+                    <nav class="eyebrow {{ $headerImage ? 'text-day/80' : 'text-mute' }} mb-5 flex flex-wrap gap-x-2" aria-label="Breadcrumb" data-reveal>
                         @foreach ($breadcrumbs as $crumb)
                             @if (! $loop->last)<a href="{{ $crumb['url'] }}" class="link-draw">{{ $crumb['name'] }}</a><span>/</span>@endif
                         @endforeach
@@ -36,8 +43,9 @@
                 @endif
                 <h1 class="h1" data-split>{{ $heading }}</h1>
                 @if ($description)
-                    <p class="lead max-w-2xl mt-5 text-mute" data-reveal style="--d: 200ms">{{ $description }}</p>
+                    <p class="lead max-w-2xl mt-5 {{ $headerImage ? 'text-day/85' : 'text-mute' }}" data-reveal style="--d: 200ms">{{ $description }}</p>
                 @endif
+                </div>
             </header>
         @endunless
 

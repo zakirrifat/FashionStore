@@ -109,6 +109,7 @@ class ShopController extends Controller
             'breadcrumbs' => $this->breadcrumbs($category),
             'seoTitle' => $category->seo_title,
             'seoDescription' => $category->seo_description,
+            'headerImage' => $category->header_image,
         ]);
     }
 
@@ -293,6 +294,7 @@ class ShopController extends Controller
             'selectedColours' => $selectedColours,
             'sort' => $sort,
             'banner' => $data['banner'] ?? null,
+            'headerImage' => $data['headerImage'] ?? null,
             'searchTerm' => $data['searchTerm'] ?? null,
         ]);
     }
