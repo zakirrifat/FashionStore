@@ -163,6 +163,16 @@ class HomeAndImagesTest extends TestCase
         Storage::disk('public')->assertExists('_resized/400/pages/team/ana.jpg.webp');
     }
 
+    public function test_category_page_shows_its_header_image_only_when_set(): void
+    {
+        $this->storeImage('categories/woman-header.jpg', 2400, 240);
+        Category::create(['name' => 'Woman', 'slug' => 'woman', 'header_image' => 'categories/woman-header.jpg']);
+        Category::create(['name' => 'Kids', 'slug' => 'kids']);
+
+        $this->get('/c/woman')->assertOk()->assertSee('categories/woman-header.jpg', false);
+        $this->get('/c/kids')->assertOk()->assertDontSee('woman-header.jpg', false);
+    }
+
     /* ───── Home page editor ───── */
 
     public function test_without_sections_the_automatic_home_page_is_used(): void
